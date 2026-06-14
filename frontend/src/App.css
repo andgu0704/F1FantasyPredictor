@@ -1,0 +1,115 @@
+:root {
+  --bg: #0f1116;
+  --card: #1a1d27;
+  --line: #2a2e3c;
+  --text: #e8eaf0;
+  --muted: #8b90a0;
+  --accent: #e10600; /* F1 red */
+  --good: #16a34a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.7rem;
+}
+.subtitle {
+  color: var(--muted);
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+}
+
+.controls {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 24px 0;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.controls label { font-size: 0.9rem; color: var(--muted); }
+.controls select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+.controls .checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+.summary {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 12px;
+}
+.summary-num { font-size: 2rem; font-weight: 700; }
+.summary-label { color: var(--muted); font-size: 0.8rem; }
+
+.budget-bar {
+  height: 8px;
+  background: var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+.budget-fill {
+  height: 100%;
+  background: var(--good);
+  transition: width 0.3s ease;
+}
+.budget-fill.over { background: var(--accent); }
+
+section h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 24px 0 8px;
+}
+
+.pick {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.pick-name { font-weight: 600; }
+.pick-price { color: var(--muted); font-variant-numeric: tabular-nums; }
+.pick-pts { font-variant-numeric: tabular-nums; min-width: 72px; text-align: right; }
+
+.boost-tag {
+  margin-left: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  padding: 2px 6px;
+  border-radius: 5px;
+  vertical-align: middle;
+}
+
+.status { color: var(--muted); margin-top: 24px; }
+.status.error { color: var(--accent); }
