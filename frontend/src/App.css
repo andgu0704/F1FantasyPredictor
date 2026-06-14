@@ -54,6 +54,85 @@ header h1 {
   font-size: 0.9rem;
 }
 .controls .checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.controls .num {
+  width: 52px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.controls .refresh {
+  margin-left: auto;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.controls .refresh:disabled { opacity: 0.5; cursor: default; }
+
+/* Team builder */
+.team-panel {
+  margin: 0 0 24px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.team-panel summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
+.builder { display: flex; gap: 24px; margin-top: 16px; flex-wrap: wrap; }
+.builder-col { flex: 1; min-width: 220px; }
+.builder-col h3 {
+  font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.builder-col .count { color: var(--text); }
+.chip-pool { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.pill.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pill:disabled { opacity: 0.35; cursor: default; }
+.pill-price { opacity: 0.7; font-size: 0.72rem; }
+.clear {
+  margin-top: 12px; background: none; border: 1px solid var(--line);
+  color: var(--muted); border-radius: 8px; padding: 5px 10px; cursor: pointer;
+}
+
+.transfers {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-bottom: 20px; font-size: 0.85rem;
+}
+.t-out { color: #f59e0b; }
+.t-in { color: var(--good); }
+.penalty { color: var(--accent); font-size: 1rem; }
+
+.xfer-tag {
+  margin-left: 8px; font-size: 0.6rem; font-weight: 700; padding: 2px 5px;
+  border-radius: 4px; vertical-align: middle;
+}
+.xfer-tag.in { background: var(--good); color: #fff; }
+
+/* Chips */
+.chips { margin-top: 28px; }
+.chip-row {
+  display: flex; justify-content: space-between;
+  padding: 10px 16px; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px;
+}
+.chip-row.best { border-color: var(--good); }
+.chip-row .gain { color: var(--good); font-weight: 600; }
+.chip-row .flat { color: var(--muted); }
+.info-chips { color: var(--muted); font-size: 0.78rem; margin-top: 6px; }
 
 .summary {
   display: flex;

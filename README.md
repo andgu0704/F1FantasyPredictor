@@ -11,6 +11,9 @@ The system is two decoupled halves:
 - **Optimizer** — an integer linear program that picks the roster maximizing
   Σ expected-points subject to budget + roster constraints. Consumes only a
   `{entity: (expected_points, price)}` table, so the model can be swapped freely.
+  It is **transfer-aware**: given your current team it maximizes net points
+  (gross − 10 × extra transfers beyond your free allowance) and values the
+  **chips** (Wildcard, Limitless, Extra DRS) by re-solving under each chip's rules.
 
 ## Status
 
@@ -22,6 +25,7 @@ The system is two decoupled halves:
 | 3 | Heuristic expected-points predictor | ✅ done |
 | 4 | FastAPI backend + React/Vite frontend | ✅ done |
 | 5 | ML predictor + backtest harness | ✅ done |
+| 6 | Transfer-aware optimizer + chips + per-race refresh | ✅ done |
 
 ## Data sources
 
@@ -65,7 +69,8 @@ f1fantasy/
   features.py           causal feature engineering from Jolpica results
   ml_model.py           ridge regression (numpy, closed-form)
   backtest.py           walk-forward evaluation of the predictors
-  optimizer.py          ILP roster optimizer (budget + roster + DRS boost)
+  optimizer.py          transfer-aware ILP (budget + roster + DRS + penalty)
+  chips.py              chip (Wildcard/Limitless/Extra DRS) valuation
   recommend.py          predictor + optimizer + live game_state → Lineup
   api.py                FastAPI app (/api/recommend, /api/picks, ...)
 frontend/               React/Vite UI (proxies /api to the backend)
@@ -88,8 +93,15 @@ uv run uvicorn f1fantasy.api:app --port 8000     # terminal 1: API
 cd frontend && npm install && npm run dev        # terminal 2: UI at :5173
 ```
 
-Open http://localhost:5173 — pick the predictor and toggle the DRS boost; the
-lineup re-optimizes live.
+Open http://localhost:5173:
+- Leave the team empty for a **fresh-build** optimal lineup, or enter **your
+  current team** (5 drivers + 2 constructors) to get **transfer suggestions**
+  (OUT/IN) that respect the −10 penalty and your free-transfer count.
+- The **chip panel** shows how many extra points Wildcard / Limitless / Extra
+  DRS would buy this race, highlighting the best one.
+- **↻ Refresh data** re-ingests the latest Jolpica + fantasy feeds, so the app
+  tracks each upcoming Grand Prix. For hands-off updates, schedule the ingest
+  weekly (e.g. cron): `uv run python -m f1fantasy.ingestion.ingest`.
 
 ## Predictor accuracy (backtest)
 
