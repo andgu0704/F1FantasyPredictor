@@ -20,6 +20,7 @@ from f1fantasy.db import connect
 from f1fantasy.optimizer import optimize_lineup
 from f1fantasy.predictor.base import PredictorBase, Pick
 from f1fantasy.predictor.heuristic import HeuristicPredictor
+from f1fantasy.predictor.ml import MLPredictor
 from f1fantasy.predictor.naive import NaivePredictor
 from f1fantasy.recommend import current_gameday
 
@@ -36,6 +37,7 @@ app.add_middleware(
 _PREDICTORS: dict[str, type[PredictorBase]] = {
     "heuristic": HeuristicPredictor,
     "naive": NaivePredictor,
+    "ml": MLPredictor,
 }
 
 

@@ -21,7 +21,7 @@ The system is two decoupled halves:
 | 2 | Entity mapping + ILP optimizer (naive predictor) | ✅ done |
 | 3 | Heuristic expected-points predictor | ✅ done |
 | 4 | FastAPI backend + React/Vite frontend | ✅ done |
-| 5 | ML predictor behind `PredictorBase` | ⏳ next |
+| 5 | ML predictor + backtest harness | ✅ done |
 
 ## Data sources
 
@@ -61,6 +61,10 @@ f1fantasy/
     base.py             PredictorBase + Pick contract
     naive.py            season-average baseline predictor
     heuristic.py        form + track + reliability predictor (default)
+    ml.py               ridge model as a learned baseline factor
+  features.py           causal feature engineering from Jolpica results
+  ml_model.py           ridge regression (numpy, closed-form)
+  backtest.py           walk-forward evaluation of the predictors
   optimizer.py          ILP roster optimizer (budget + roster + DRS boost)
   recommend.py          predictor + optimizer + live game_state → Lineup
   api.py                FastAPI app (/api/recommend, /api/picks, ...)
@@ -86,3 +90,25 @@ cd frontend && npm install && npm run dev        # terminal 2: UI at :5173
 
 Open http://localhost:5173 — pick the predictor and toggle the DRS boost; the
 lineup re-optimizes live.
+
+## Predictor accuracy (backtest)
+
+```bash
+uv run python -m f1fantasy.backtest
+```
+
+Walk-forward over the available rounds, scoring each predictor's driver ranking
+against actual race results (Spearman ρ, top-5 hit rate):
+
+| predictor | Spearman ρ | top-5 hit |
+|-----------|-----------:|----------:|
+| naive (season avg) | 0.49 | 71% |
+| heuristic          | 0.48 | 67% |
+| ml (ridge)         | 0.48 | 68% |
+
+Honest finding: season-to-date form is a strong baseline, and the form/track/
+reliability signals (hand-tuned or learned) don't beat it on position-derived
+features. Beating it needs genuinely new inputs — qualifying/practice pace,
+weather, upgrades (FastF1) — or per-race fantasy-points labels. The predictors
+are interchangeable behind `PredictorBase`, so adding richer features is local
+to the predictor layer.

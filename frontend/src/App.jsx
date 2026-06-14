@@ -95,6 +95,7 @@ export default function App() {
           <select value={predictor} onChange={(e) => setPredictor(e.target.value)}>
             <option value="heuristic">Heuristic (form + track)</option>
             <option value="naive">Naive (season avg)</option>
+            <option value="ml">ML (ridge)</option>
           </select>
         </label>
         <label className="checkbox">
