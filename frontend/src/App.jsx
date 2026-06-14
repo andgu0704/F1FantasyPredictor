@@ -151,6 +151,7 @@ export default function App() {
   const [predictor, setPredictor] = useState('naive')
   const [drsBoost, setDrsBoost] = useState(true)
   const [freeTransfers, setFreeTransfers] = useState(2)
+  const [budget, setBudget] = useState('')
   const [team, setTeam] = useState(() => new Set())
   const [refreshing, setRefreshing] = useState(false)
   const [tick, setTick] = useState(0)
@@ -165,10 +166,11 @@ export default function App() {
     return d === MAX_DRIVERS && c === MAX_CONSTRUCTORS
   }, [team, pool])
 
+  const budgetParam = budget !== '' && +budget > 0 ? `&budget=${+budget}` : ''
   const teamParam = teamComplete ? `&current_team=${[...team].join(',')}&free_transfers=${freeTransfers}` : ''
-  const [rec] = useApi(`/api/recommend?predictor=${predictor}&drs_boost=${drsBoost}${teamParam}&_=${tick}`)
+  const [rec] = useApi(`/api/recommend?predictor=${predictor}&drs_boost=${drsBoost}${teamParam}${budgetParam}&_=${tick}`)
   const [chips] = useApi(teamComplete
-    ? `/api/chips?predictor=${predictor}&current_team=${[...team].join(',')}&free_transfers=${freeTransfers}&_=${tick}`
+    ? `/api/chips?predictor=${predictor}&current_team=${[...team].join(',')}&free_transfers=${freeTransfers}${budgetParam}&_=${tick}`
     : null)
 
   const toggle = (id) => setTeam((prev) => {
@@ -214,6 +216,11 @@ export default function App() {
         <label>Free transfers&nbsp;
           <input className="num" type="number" min="0" value={freeTransfers}
             onChange={(e) => setFreeTransfers(Math.max(0, +e.target.value))} />
+        </label>
+        <label>Budget $M&nbsp;
+          <input className="num" type="number" min="0" step="0.1" value={budget}
+            placeholder={gameday ? gameday.budget : '100'}
+            onChange={(e) => setBudget(e.target.value)} />
         </label>
         <button className="refresh" onClick={refresh} disabled={refreshing}>
           {refreshing ? 'Refreshing…' : '↻ Refresh data'}
