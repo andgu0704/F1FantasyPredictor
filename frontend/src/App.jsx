@@ -204,9 +204,9 @@ export default function App() {
       <div className="controls">
         <label>Predictor&nbsp;
           <select value={predictor} onChange={(e) => setPredictor(e.target.value)}>
-            <option value="naive">Naive (best)</option>
+            <option value="naive">Naive</option>
             <option value="heuristic">Heuristic</option>
-            <option value="ml">ML</option>
+            <option value="ml">ML (pace-aware)</option>
           </select>
         </label>
         <label className="checkbox">

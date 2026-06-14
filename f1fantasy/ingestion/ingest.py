@@ -160,6 +160,13 @@ def main(argv: list[str]) -> int:
         print(f"  unmatched: {len(unmatched)}", flush=True)
         for u in unmatched:
             print(f"    ! {u}", flush=True)
+        # FastF1 race-pace (only the newest round downloads; rest is cached).
+        try:
+            from f1fantasy.ingestion.fastf1_pace import ingest_seasons
+            print("Ingesting FastF1 race pace ...", flush=True)
+            ingest_seasons(conn, seasons)
+        except Exception as e:
+            print(f"  race pace skipped: {type(e).__name__}: {e}", flush=True)
     finally:
         conn.close()
     return 0

@@ -22,9 +22,10 @@ from dataclasses import dataclass
 
 GRID = 20
 RECENT = 3
-DEFAULT_GAP_S = 1.5     # fallback qualifying gap-to-pole (s) when no quali history
+DEFAULT_GAP_S = 1.5        # fallback qualifying gap-to-pole (s) when no quali history
+DEFAULT_RACE_GAP_S = 1.5   # fallback race-pace gap (s) when no FastF1 history
 FEATURE_NAMES = ["recent_form", "season_form", "reliability", "track_history",
-                 "team_form", "quali_pace"]
+                 "team_form", "quali_pace", "race_pace"]
 
 
 def goodness(position: int | None) -> float:
@@ -70,8 +71,13 @@ def _load(conn: sqlite3.Connection) -> tuple[list[dict], dict]:
         pole[(s, rd)] = min(ms, pole.get((s, rd), ms))
     gap = {k: (ms - pole[(k[0], k[1])]) / 1000.0 for k, ms in best.items()}
 
+    # Median race-pace gap (seconds) from FastF1, per (season, round, driver).
+    race_pace = {(r["season"], r["round"], r["driver_id"]): r["pace_gap_s"]
+                 for r in conn.execute("SELECT season, round, driver_id, pace_gap_s FROM race_pace")}
+
     for r in results:
         r["quali_gap"] = gap.get((r["season"], r["round"], r["driver_id"]))
+        r["race_gap"] = race_pace.get((r["season"], r["round"], r["driver_id"]))
     return results, order
 
 
@@ -119,8 +125,12 @@ class _Index:
         gaps = [x["quali_gap"] for x in recent if x.get("quali_gap") is not None]
         quali_pace = sum(gaps) / len(gaps) if gaps else DEFAULT_GAP_S
 
-        return ([recent_form, season_form, reliability, track_history, team_form, quali_pace],
-                season_form)
+        # Recent race-pace gap (FastF1): true race pace, cleaner than position.
+        rgaps = [x["race_gap"] for x in recent if x.get("race_gap") is not None]
+        race_pace = sum(rgaps) / len(rgaps) if rgaps else DEFAULT_RACE_GAP_S
+
+        return ([recent_form, season_form, reliability, track_history, team_form,
+                 quali_pace, race_pace], season_form)
 
 
 def build_rows(conn: sqlite3.Connection) -> list[Row]:

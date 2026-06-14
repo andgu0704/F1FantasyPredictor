@@ -41,7 +41,7 @@ def _spearman(pred: list[float], actual: list[float]) -> float | None:
 
 
 def _heuristic_pred(f: list[float]) -> float:
-    recent_form, season_form, reliability, track_history, _team, _quali = f
+    recent_form, season_form, reliability, track_history = f[0], f[1], f[2], f[3]
     if season_form <= 0:
         return recent_form
     form = _clamp(recent_form / season_form, *FORM_CLAMP)

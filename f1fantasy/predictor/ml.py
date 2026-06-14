@@ -34,7 +34,9 @@ def _clamp(x: float, lo: float, hi: float) -> float:
 class MLPredictor(PredictorBase):
     name = "ml-ridge-goodness-factor"
 
-    def __init__(self, alpha: float = 1.0) -> None:
+    def __init__(self, alpha: float = 10.0) -> None:
+        # Higher regularization generalizes best on this small, pace-augmented
+        # dataset (see backtest); the model is interchangeable behind the API.
         self.alpha = alpha
 
     def _train(self, conn: sqlite3.Connection) -> RidgeModel:

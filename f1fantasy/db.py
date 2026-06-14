@@ -101,6 +101,17 @@ CREATE TABLE IF NOT EXISTS game_state (
     PRIMARY KEY (season, gameday)
 );
 
+-- Median green-flag race-pace gap (seconds) to the fastest car, per driver per
+-- race, from FastF1 timing. Captures true race pace, which is less noisy than
+-- finishing position. Used causally (prior races) as a predictor feature.
+CREATE TABLE IF NOT EXISTS race_pace (
+    season     INTEGER NOT NULL,
+    round      INTEGER NOT NULL,
+    driver_id  TEXT NOT NULL,
+    pace_gap_s REAL,
+    PRIMARY KEY (season, round, driver_id)
+);
+
 -- Maps a fantasy player/team id to a Jolpica driver_id/constructor_id so the
 -- price/points data can be joined to historical results. Populated in Phase 2.
 CREATE TABLE IF NOT EXISTS fantasy_entity_map (

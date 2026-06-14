@@ -26,6 +26,7 @@ The system is two decoupled halves:
 | 4 | FastAPI backend + React/Vite frontend | ✅ done |
 | 5 | ML predictor + backtest harness | ✅ done |
 | 6 | Transfer-aware optimizer + chips + per-race refresh | ✅ done |
+| 7 | FastF1 pace features + budget input + single-app deploy | ✅ done |
 
 ## Data sources
 
@@ -66,7 +67,8 @@ f1fantasy/
     naive.py            season-average baseline predictor
     heuristic.py        form + track + reliability predictor (default)
     ml.py               ridge model as a learned baseline factor
-  features.py           causal feature engineering from Jolpica results
+  features.py           causal feature engineering (results + quali + race pace)
+  ingestion/fastf1_pace.py  median race-pace gap per driver (FastF1)
   ml_model.py           ridge regression (numpy, closed-form)
   backtest.py           walk-forward evaluation of the predictors
   optimizer.py          transfer-aware ILP (budget + roster + DRS + penalty)
@@ -103,6 +105,21 @@ Open http://localhost:5173:
   tracks each upcoming Grand Prix. For hands-off updates, schedule the ingest
   weekly (e.g. cron): `uv run python -m f1fantasy.ingestion.ingest`.
 
+## Deploy (single app)
+
+In production FastAPI serves the built frontend, so it's one process:
+
+```bash
+cd frontend && npm run build && cd ..      # build the UI into frontend/dist
+uv run uvicorn f1fantasy.api:app --port 8000   # serves UI + API at :8000
+```
+
+Or with Docker (builds the UI, ingests on first boot, then serves):
+
+```bash
+docker build -t f1fantasy . && docker run -p 8000:8000 f1fantasy
+```
+
 ## Predictor accuracy (backtest)
 
 ```bash
@@ -114,13 +131,14 @@ against actual race results (Spearman ρ, top-5 hit rate):
 
 | predictor | Spearman ρ | top-5 hit |
 |-----------|-----------:|----------:|
-| naive (season avg) | 0.49 | 71% |
+| naive (season avg) | 0.49 | **71%** |
 | heuristic          | 0.48 | 67% |
-| ml (ridge)         | 0.48 | 68% |
+| ml (pace-aware)    | **0.51** | 69% |
 
-Honest finding: season-to-date form is a strong baseline, and the form/track/
-reliability signals (hand-tuned or learned) don't beat it on position-derived
-features. Beating it needs genuinely new inputs — qualifying/practice pace,
-weather, upgrades (FastF1) — or per-race fantasy-points labels. The predictors
-are interchangeable behind `PredictorBase`, so adding richer features is local
-to the predictor layer.
+Adding **pace features** — qualifying gap-to-pole (from Jolpica) and median
+race-pace gap (from **FastF1**) — lifts the ML model from 0.48 to 0.51 Spearman,
+past the season-average baseline, confirming pace is a cleaner signal than
+finishing position. Naive still edges the **top-5 hit rate** (the more practical
+metric), so it remains the default; ML is the better overall-ranking model and
+the slot where richer features keep paying off. All predictors are
+interchangeable behind `PredictorBase`.
