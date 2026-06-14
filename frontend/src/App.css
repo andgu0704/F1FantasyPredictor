@@ -183,6 +183,12 @@ section h2 {
 .pick-price { color: var(--muted); font-variant-numeric: tabular-nums; }
 .pick-pts { font-variant-numeric: tabular-nums; min-width: 72px; text-align: right; }
 .pick-range { display: block; font-size: 0.68rem; color: var(--muted); }
+.trend { margin-left: 6px; font-weight: 700; }
+.trend.up { color: var(--good); }
+.trend.down { color: var(--accent); }
+.trend.flat { color: var(--muted); }
+.proj-legend { color: var(--muted); font-size: 0.75rem; margin-top: 16px; }
+.proj-legend .trend { margin: 0 3px; }
 
 .boost-tag {
   margin-left: 10px;

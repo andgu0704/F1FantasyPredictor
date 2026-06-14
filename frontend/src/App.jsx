@@ -60,7 +60,17 @@ function TeamBuilder({ pool, team, toggle }) {
   )
 }
 
-function PickRow({ pick, boosted, mult, badge }) {
+function Trend({ move }) {
+  if (move === undefined || Math.abs(move) < 0.03) return <span className="trend flat" title="price steady">→</span>
+  const up = move > 0
+  return (
+    <span className={`trend ${up ? 'up' : 'down'}`} title={`projected ${up ? '+' : ''}${move}M next race`}>
+      {up ? '↑' : '↓'}
+    </span>
+  )
+}
+
+function PickRow({ pick, boosted, mult, badge, move }) {
   return (
     <div className="pick">
       <span className="pick-name">
@@ -68,7 +78,7 @@ function PickRow({ pick, boosted, mult, badge }) {
         {boosted && <span className="boost-tag">DRS&nbsp;{mult}×</span>}
         {badge && <span className={`xfer-tag ${badge}`}>{badge === 'in' ? 'IN' : 'OUT'}</span>}
       </span>
-      <span className="pick-price">{fmtPrice(pick.price)}</span>
+      <span className="pick-price">{fmtPrice(pick.price)}<Trend move={move} /></span>
       <span className="pick-pts">
         {fmtPts(pick.expected_points)}
         {pick.std > 0 && (
@@ -81,7 +91,7 @@ function PickRow({ pick, boosted, mult, badge }) {
   )
 }
 
-function Lineup({ data, teamActive }) {
+function Lineup({ data, teamActive, projections }) {
   const pct = Math.min((data.total_price / data.budget) * 100, 100)
   const over = data.total_price > data.budget
   const inIds = new Set(data.transfers_in.map((p) => p.fantasy_id))
@@ -124,14 +134,16 @@ function Lineup({ data, teamActive }) {
         <h2>Drivers</h2>
         {data.drivers.slice().sort((a, b) => b.expected_points - a.expected_points).map((p) => (
           <PickRow key={p.fantasy_id} pick={p} boosted={p.fantasy_id === data.boosted_id}
-            mult={data.drs_multiplier} badge={teamActive && inIds.has(p.fantasy_id) ? 'in' : null} />
+            mult={data.drs_multiplier} badge={teamActive && inIds.has(p.fantasy_id) ? 'in' : null}
+            move={projections?.[p.fantasy_id]} />
         ))}
       </section>
       <section>
         <h2>Constructors</h2>
         {data.constructors.slice().sort((a, b) => b.expected_points - a.expected_points).map((p) => (
           <PickRow key={p.fantasy_id} pick={p} boosted={false}
-            mult={data.drs_multiplier} badge={teamActive && inIds.has(p.fantasy_id) ? 'in' : null} />
+            mult={data.drs_multiplier} badge={teamActive && inIds.has(p.fantasy_id) ? 'in' : null}
+            move={projections?.[p.fantasy_id]} />
         ))}
       </section>
     </>
@@ -167,7 +179,9 @@ export default function App() {
 
   const [gameday] = useApi(`/api/gameday?_=${tick}`)
   const [poolData] = useApi(`/api/picks?predictor=${predictor}&_=${tick}`)
+  const [projData] = useApi(`/api/projections?_=${tick}`)
   const pool = poolData?.picks ?? []
+  const projections = projData?.projections
 
   const teamComplete = useMemo(() => {
     const d = [...team].filter((id) => pool.find((p) => p.fantasy_id === id && p.entity_type === 'driver')).length
@@ -245,7 +259,14 @@ export default function App() {
         {team.size > 0 && <button className="clear" onClick={() => setTeam(new Set())}>Clear team</button>}
       </details>
 
-      {rec && <Lineup data={rec} teamActive={teamComplete} />}
+      {rec && <Lineup data={rec} teamActive={teamComplete} projections={projections} />}
+      {rec && (
+        <p className="proj-legend">
+          Price trend next race: <span className="trend up">↑</span> rise ·
+          <span className="trend down">↓</span> fall ·
+          <span className="trend flat">→</span> steady (heuristic — buy risers early to bank value)
+        </p>
+      )}
       {teamComplete && <Chips data={chips} />}
     </div>
   )

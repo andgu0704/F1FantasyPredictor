@@ -133,6 +133,17 @@ def predictors() -> dict:
     return {"predictors": [{"id": k, "name": v.name} for k, v in _PREDICTORS.items()]}
 
 
+@app.get("/api/projections")
+def projections() -> dict:
+    """Heuristic projected price movement ($M) per entity for the next gameday."""
+    from f1fantasy.price_projection import project_prices
+
+    with _db() as conn:
+        season, gd, _ = current_gameday(conn)
+        moves = project_prices(conn, season, gd)
+    return {"projections": moves}
+
+
 @app.get("/api/picks")
 def picks(predictor: str = "naive") -> dict:
     pred = _get_predictor(predictor)

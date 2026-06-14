@@ -28,6 +28,13 @@ The system is two decoupled halves:
 | 6 | Transfer-aware optimizer + chips + per-race refresh | ✅ done |
 | 7 | FastF1 pace features + budget input + single-app deploy | ✅ done |
 | 8 | Variance/risk + No Negative chip + sprint weekends + tests | ✅ done |
+| 9 | Price-movement projection (buy-timing hints) | ✅ done |
+
+> Note on multi-week planning: a full multi-race transfer optimizer would rest on
+> price forecasts, but the official price algorithm and a historical price
+> time-series aren't public. Rather than build false precision, the app projects
+> next-race price *direction* from value efficiency + form (a heuristic, labeled
+> as such in the UI) so you can buy risers early to bank team value.
 
 ## Data sources
 
