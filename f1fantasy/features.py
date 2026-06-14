@@ -22,7 +22,9 @@ from dataclasses import dataclass
 
 GRID = 20
 RECENT = 3
-FEATURE_NAMES = ["recent_form", "season_form", "reliability", "track_history", "team_form"]
+DEFAULT_GAP_S = 1.5     # fallback qualifying gap-to-pole (s) when no quali history
+FEATURE_NAMES = ["recent_form", "season_form", "reliability", "track_history",
+                 "team_form", "quali_pace"]
 
 
 def goodness(position: int | None) -> float:
@@ -53,6 +55,23 @@ def _load(conn: sqlite3.Connection) -> tuple[list[dict], dict]:
     order = {sr: i for i, (sr, _date) in enumerate(
         sorted(unique.items(), key=lambda kv: (kv[1], kv[0]))
     )}
+
+    # Qualifying gap-to-pole (seconds) per (season, round, driver): a cleaner
+    # measure of pace than finishing position. best lap = fastest of Q1/Q2/Q3.
+    quali = conn.execute(
+        """SELECT season, round, driver_id,
+                  MIN(COALESCE(q1_ms, 9e18), COALESCE(q2_ms, 9e18), COALESCE(q3_ms, 9e18)) AS best_ms
+           FROM qualifying"""
+    ).fetchall()
+    best = {(r["season"], r["round"], r["driver_id"]): r["best_ms"]
+            for r in quali if r["best_ms"] and r["best_ms"] < 9e18}
+    pole = {}
+    for (s, rd, _d), ms in best.items():
+        pole[(s, rd)] = min(ms, pole.get((s, rd), ms))
+    gap = {k: (ms - pole[(k[0], k[1])]) / 1000.0 for k, ms in best.items()}
+
+    for r in results:
+        r["quali_gap"] = gap.get((r["season"], r["round"], r["driver_id"]))
     return results, order
 
 
@@ -95,7 +114,13 @@ class _Index:
         team_form = (sum((x["points"] or 0.0) for x in team_prior) / len(team_prior)
                      if team_prior else 0.0)
 
-        return [recent_form, season_form, reliability, track_history, team_form], season_form
+        # Recent qualifying pace: average gap-to-pole over recent prior races
+        # (lower = faster). Less noisy than finishing position.
+        gaps = [x["quali_gap"] for x in recent if x.get("quali_gap") is not None]
+        quali_pace = sum(gaps) / len(gaps) if gaps else DEFAULT_GAP_S
+
+        return ([recent_form, season_form, reliability, track_history, team_form, quali_pace],
+                season_form)
 
 
 def build_rows(conn: sqlite3.Connection) -> list[Row]:
