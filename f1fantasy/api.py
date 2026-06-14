@@ -45,8 +45,8 @@ _PREDICTORS: dict[str, type[PredictorBase]] = {
     "ml": MLPredictor,
 }
 
-# Chips the optimizer values vs. surfaces-only (in-race / variance / mobile).
-_INFO_CHIPS = ["final_fix", "no_negative", "auto_pilot"]
+# Chips the optimizer values vs. surfaces-only (in-race / mobile).
+_INFO_CHIPS = ["final_fix", "auto_pilot"]
 
 
 @contextmanager
@@ -79,6 +79,9 @@ def _pick_json(p: Pick) -> dict:
         "name": p.name,
         "price": round(p.price, 1),
         "expected_points": round(p.expected_points, 1),
+        "std": round(p.std, 1),
+        "floor": round(p.expected_points - p.std, 1),
+        "ceiling": round(p.expected_points + p.std, 1),
     }
 
 

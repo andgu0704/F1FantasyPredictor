@@ -22,6 +22,7 @@ import numpy as np
 from f1fantasy.features import build_rows, upcoming_features
 from f1fantasy.ml_model import RidgeModel
 from f1fantasy.predictor.base import Pick, PredictorBase
+from f1fantasy.risk import driver_points_std
 
 SCALE_FLOOR = 5.0
 FACTOR_CLAMP = (0.6, 1.4)
@@ -76,6 +77,8 @@ class MLPredictor(PredictorBase):
 
             factor = factors.get(r["jolpica_id"], 1.0) if r["entity_type"] == "driver" else 1.0
             expected = baseline + (factor - 1.0) * max(baseline, SCALE_FLOOR)
+            std = (driver_points_std(conn, season, r["jolpica_id"], baseline)
+                   if r["jolpica_id"] and r["entity_type"] == "driver" else 0.0)
             picks.append(Pick(r["entity_type"], r["fantasy_id"],
-                              r["name"] or r["team_name"], float(r["price"]), expected))
+                              r["name"] or r["team_name"], float(r["price"]), expected, std))
         return picks

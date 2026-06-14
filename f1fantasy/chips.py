@@ -19,6 +19,7 @@ from dataclasses import dataclass
 
 from f1fantasy.optimizer import Lineup, optimize_lineup
 from f1fantasy.predictor.base import Pick
+from f1fantasy.risk import no_negative_value
 
 
 @dataclass
@@ -56,6 +57,10 @@ def evaluate_chips(
             free_transfers=free_transfers, **kwargs,
         )
         chips.append(ChipValue(name, lineup.net_points - base.net_points, lineup))
+
+    # No Negative does not change the roster; its value is the expected negative
+    # points it would recover from the base lineup's drivers (variance-based).
+    chips.append(ChipValue("no_negative", no_negative_value(base.drivers), base))
 
     chips.sort(key=lambda c: c.delta, reverse=True)
     return base, chips

@@ -21,6 +21,7 @@ class Pick:
     name: str
     price: float
     expected_points: float
+    std: float = 0.0          # estimated points std-dev (0 = unknown/risk-free)
 
 
 class PredictorBase:

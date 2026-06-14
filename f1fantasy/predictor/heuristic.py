@@ -25,6 +25,7 @@ from __future__ import annotations
 import sqlite3
 
 from f1fantasy.predictor.base import Pick, PredictorBase
+from f1fantasy.risk import driver_points_std
 
 GRID = 20
 RECENT_RACES = 3
@@ -79,9 +80,11 @@ class HeuristicPredictor(PredictorBase):
                 factor = self._entity_factor(conn, season, id_col, r["jolpica_id"], circuit_id)
 
             expected = baseline + (factor - 1.0) * max(baseline, SCALE_FLOOR)
+            std = (driver_points_std(conn, season, r["jolpica_id"], baseline)
+                   if r["jolpica_id"] and r["entity_type"] == "driver" else 0.0)
             picks.append(
                 Pick(r["entity_type"], r["fantasy_id"], r["name"] or r["team_name"],
-                     float(r["price"]), expected)
+                     float(r["price"]), expected, std)
             )
         return picks
 

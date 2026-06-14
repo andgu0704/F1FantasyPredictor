@@ -5,7 +5,9 @@ const MAX_DRIVERS = 5
 const MAX_CONSTRUCTORS = 2
 const fmtPrice = (v) => `$${v.toFixed(1)}M`
 const fmtPts = (v) => `${v.toFixed(1)} pts`
-const CHIP_LABELS = { wildcard: 'Wildcard', limitless: 'Limitless', extra_drs: 'Extra DRS' }
+const CHIP_LABELS = {
+  wildcard: 'Wildcard', limitless: 'Limitless', extra_drs: 'Extra DRS', no_negative: 'No Negative',
+}
 
 function useApi(url) {
   const [data, setData] = useState(null)
@@ -67,7 +69,14 @@ function PickRow({ pick, boosted, mult, badge }) {
         {badge && <span className={`xfer-tag ${badge}`}>{badge === 'in' ? 'IN' : 'OUT'}</span>}
       </span>
       <span className="pick-price">{fmtPrice(pick.price)}</span>
-      <span className="pick-pts">{fmtPts(pick.expected_points)}</span>
+      <span className="pick-pts">
+        {fmtPts(pick.expected_points)}
+        {pick.std > 0 && (
+          <span className="pick-range" title="floor–ceiling (±1σ)">
+            {pick.floor}–{pick.ceiling}
+          </span>
+        )}
+      </span>
     </div>
   )
 }

@@ -50,4 +50,4 @@ def test_unknown_predictor_404():
 def test_chips_value_keys():
     j = client.get("/api/chips").json()
     assert "valued" in j and "info_only" in j
-    assert {c["chip"] for c in j["valued"]} == {"wildcard", "limitless", "extra_drs"}
+    assert {c["chip"] for c in j["valued"]} == {"wildcard", "limitless", "extra_drs", "no_negative"}

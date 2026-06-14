@@ -178,6 +178,7 @@ section h2 {
 .pick-name { font-weight: 600; }
 .pick-price { color: var(--muted); font-variant-numeric: tabular-nums; }
 .pick-pts { font-variant-numeric: tabular-nums; min-width: 72px; text-align: right; }
+.pick-range { display: block; font-size: 0.68rem; color: var(--muted); }
 
 .boost-tag {
   margin-left: 10px;
