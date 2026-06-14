@@ -8,7 +8,7 @@ __pycache__/
 # (uv.lock IS committed; the venv is not)
 
 # Local data
-data/*.db
+# (f1fantasy.db IS committed for Vercel deployment; journals are not)
 data/*.db-journal
 data/fastf1_cache/
 
