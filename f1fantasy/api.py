@@ -6,7 +6,7 @@ Endpoints:
     GET  /api/health
     GET  /api/gameday                  -> season/gameday/budget/deadline
     GET  /api/predictors
-    GET  /api/picks?predictor=heuristic-> every pick with price + expected pts
+    GET  /api/picks?predictor=naive    -> every pick with price + expected pts
     GET  /api/recommend                -> optimal lineup (optionally transfer-aware)
     GET  /api/chips                     -> base lineup + chip valuations
     POST /api/refresh                  -> re-run ingestion for the latest gameday
@@ -122,7 +122,7 @@ def predictors() -> dict:
 
 
 @app.get("/api/picks")
-def picks(predictor: str = "heuristic") -> dict:
+def picks(predictor: str = "naive") -> dict:
     pred = _get_predictor(predictor)
     with _db() as conn:
         season, gd, _ = current_gameday(conn)
@@ -142,7 +142,7 @@ _CHIP_KWARGS = {
 
 @app.get("/api/recommend")
 def recommend(
-    predictor: str = "heuristic",
+    predictor: str = "naive",
     drs_boost: bool = True,
     budget: float | None = Query(None, gt=0, description="Override the budget cap."),
     current_team: str | None = Query(None, description="Comma-separated fantasy_ids."),
@@ -167,7 +167,7 @@ def recommend(
 
 @app.get("/api/chips")
 def chips(
-    predictor: str = "heuristic",
+    predictor: str = "naive",
     budget: float | None = Query(None, gt=0),
     current_team: str | None = Query(None),
     free_transfers: int = Query(2, ge=0),

@@ -14,7 +14,6 @@ import sqlite3
 from f1fantasy.db import connect
 from f1fantasy.optimizer import DEFAULT_BUDGET, Lineup, optimize_lineup
 from f1fantasy.predictor.base import PredictorBase
-from f1fantasy.predictor.heuristic import HeuristicPredictor
 from f1fantasy.predictor.naive import NaivePredictor
 
 
@@ -32,7 +31,7 @@ def recommend(
     predictor: PredictorBase | None = None,
     drs_boost: bool = True,
 ) -> tuple[Lineup, str]:
-    predictor = predictor or HeuristicPredictor()
+    predictor = predictor or NaivePredictor()
     season, gameday, budget = current_gameday(conn)
     picks = predictor.predict(conn, season, gameday)
     lineup = optimize_lineup(picks, budget=budget, drs_boost=drs_boost)

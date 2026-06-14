@@ -148,7 +148,7 @@ function Chips({ data }) {
 }
 
 export default function App() {
-  const [predictor, setPredictor] = useState('heuristic')
+  const [predictor, setPredictor] = useState('naive')
   const [drsBoost, setDrsBoost] = useState(true)
   const [freeTransfers, setFreeTransfers] = useState(2)
   const [team, setTeam] = useState(() => new Set())
@@ -202,8 +202,8 @@ export default function App() {
       <div className="controls">
         <label>Predictor&nbsp;
           <select value={predictor} onChange={(e) => setPredictor(e.target.value)}>
+            <option value="naive">Naive (best)</option>
             <option value="heuristic">Heuristic</option>
-            <option value="naive">Naive</option>
             <option value="ml">ML</option>
           </select>
         </label>
