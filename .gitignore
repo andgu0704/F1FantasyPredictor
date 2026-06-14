@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# uv
+# (uv.lock IS committed; the venv is not)
+
+# Local data
+data/*.db
+data/*.db-journal
+
+# Env / secrets
+.env
+*.local
