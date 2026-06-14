@@ -15,9 +15,11 @@ Endpoints:
 from __future__ import annotations
 
 from contextlib import contextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from f1fantasy.chips import evaluate_chips
 from f1fantasy.db import connect
@@ -200,3 +202,10 @@ def refresh() -> dict:
     with _db() as conn:
         season, gd, budget = current_gameday(conn)
     return {"ok": rc == 0, "season": season, "gameday": gd, "budget": budget}
+
+
+# Serve the built frontend (single-app deploy). Mounted last so /api/* wins.
+# In dev the Vite server serves the UI instead and this dir simply won't exist.
+_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if _DIST.is_dir():
+    app.mount("/", StaticFiles(directory=str(_DIST), html=True), name="frontend")

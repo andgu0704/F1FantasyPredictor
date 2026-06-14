@@ -1,0 +1,10 @@
+.git
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+frontend/node_modules
+frontend/dist
+data/*.db
+data/fastf1_cache
+.claude
