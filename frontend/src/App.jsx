@@ -206,6 +206,7 @@ export default function App() {
           <p className="subtitle">
             Gameday {gameday.gameday} · {gameday.season}
             {gameday.deadline && <> · deadline {gameday.deadline.split(' ')[0]}</>}
+            {gameday.is_sprint && <span className="sprint-badge">🏁 SPRINT</span>}
           </p>
         )}
       </header>

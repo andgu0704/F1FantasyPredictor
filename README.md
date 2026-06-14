@@ -27,6 +27,7 @@ The system is two decoupled halves:
 | 5 | ML predictor + backtest harness | ✅ done |
 | 6 | Transfer-aware optimizer + chips + per-race refresh | ✅ done |
 | 7 | FastF1 pace features + budget input + single-app deploy | ✅ done |
+| 8 | Variance/risk + No Negative chip + sprint weekends + tests | ✅ done |
 
 ## Data sources
 

@@ -65,15 +65,17 @@ def _upsert_constructor(conn: sqlite3.Connection, c: dict) -> None:
 
 def _upsert_race(conn: sqlite3.Connection, season: int, race: dict) -> None:
     circuit = race.get("Circuit", {})
+    is_sprint = 1 if race.get("Sprint") else 0
     conn.execute(
-        """INSERT INTO races (season, round, race_name, circuit_id, circuit_name, date)
-           VALUES (?, ?, ?, ?, ?, ?)
+        """INSERT INTO races (season, round, race_name, circuit_id, circuit_name, date, is_sprint)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(season, round) DO UPDATE SET
              race_name=excluded.race_name, circuit_id=excluded.circuit_id,
-             circuit_name=excluded.circuit_name, date=excluded.date""",
+             circuit_name=excluded.circuit_name, date=excluded.date,
+             is_sprint=MAX(races.is_sprint, excluded.is_sprint)""",
         (
             season, int(race["round"]), race.get("raceName"),
-            circuit.get("circuitId"), circuit.get("circuitName"), race.get("date"),
+            circuit.get("circuitId"), circuit.get("circuitName"), race.get("date"), is_sprint,
         ),
     )
 
@@ -137,6 +139,32 @@ def ingest_season(conn: sqlite3.Connection, client: JolpicaClient, season: int) 
                 ),
             )
             counts["qualifying"] += 1
+
+    # Sprint results (sprint weekends only).
+    counts["sprint"] = 0
+    for race in client.sprint(season):
+        rnd = int(race["round"])
+        conn.execute("UPDATE races SET is_sprint=1 WHERE season=? AND round=?", (season, rnd))
+        for res in race.get("SprintResults", []):
+            driver, constructor = res["Driver"], res["Constructor"]
+            _upsert_driver(conn, driver)
+            _upsert_constructor(conn, constructor)
+            conn.execute(
+                """INSERT INTO sprint_results
+                     (season, round, driver_id, constructor_id, grid, position,
+                      position_text, points, status)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(season, round, driver_id) DO UPDATE SET
+                     constructor_id=excluded.constructor_id, grid=excluded.grid,
+                     position=excluded.position, position_text=excluded.position_text,
+                     points=excluded.points, status=excluded.status""",
+                (
+                    season, rnd, driver["driverId"], constructor["constructorId"],
+                    _int_or_none(res.get("grid")), _int_or_none(res.get("position")),
+                    res.get("positionText"), float(res.get("points", 0)), res.get("status"),
+                ),
+            )
+            counts["sprint"] += 1
 
     conn.commit()
     return counts

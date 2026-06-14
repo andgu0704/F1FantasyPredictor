@@ -79,3 +79,8 @@ class JolpicaClient:
         """Yield each race dict (with its `QualifyingResults` list)."""
         for page in self.paginate(f"{season}/qualifying"):
             yield from page["RaceTable"]["Races"]
+
+    def sprint(self, season: int) -> Iterator[dict]:
+        """Yield each race dict (with its `SprintResults` list)."""
+        for page in self.paginate(f"{season}/sprint"):
+            yield from page["RaceTable"]["Races"]

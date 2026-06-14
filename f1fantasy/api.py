@@ -117,8 +117,15 @@ def gameday() -> dict:
         row = conn.execute(
             "SELECT deadline FROM game_state WHERE season=? AND gameday=?", (season, gd)
         ).fetchone()
+        # Is the upcoming (unraced) round a sprint weekend?
+        sprint = conn.execute(
+            """SELECT is_sprint FROM races WHERE season=? AND round=(
+                   SELECT COALESCE(MAX(round), 0) + 1 FROM results WHERE season=?)""",
+            (season, season),
+        ).fetchone()
     return {"season": season, "gameday": gd, "budget": budget,
-            "deadline": row["deadline"] if row else None}
+            "deadline": row["deadline"] if row else None,
+            "is_sprint": bool(sprint["is_sprint"]) if sprint else False}
 
 
 @app.get("/api/predictors")

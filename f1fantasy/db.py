@@ -35,7 +35,22 @@ CREATE TABLE IF NOT EXISTS races (
     circuit_id   TEXT,
     circuit_name TEXT,
     date      TEXT,
+    is_sprint INTEGER DEFAULT 0,      -- 1 if the weekend has a sprint race
     PRIMARY KEY (season, round)
+);
+
+-- Sprint race results (same shape as `results`; sprint weekends only).
+CREATE TABLE IF NOT EXISTS sprint_results (
+    season         INTEGER NOT NULL,
+    round          INTEGER NOT NULL,
+    driver_id      TEXT NOT NULL,
+    constructor_id TEXT NOT NULL,
+    grid           INTEGER,
+    position       INTEGER,
+    position_text  TEXT,
+    points         REAL,
+    status         TEXT,
+    PRIMARY KEY (season, round, driver_id)
 );
 
 -- One row per driver per race (race result).
