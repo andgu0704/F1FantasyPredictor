@@ -72,10 +72,9 @@ body {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fade-up { animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.settings { animation-delay: 0.05s; }
-.team-panel { animation-delay: 0.1s; }
-.results { animation-delay: 0.12s; }
+.fade-up { animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.toolbar { animation-delay: 0.04s; }
+.results { animation-delay: 0.08s; }
 @media (prefers-reduced-motion: reduce) {
   .fade-up { animation: none; }
 }
@@ -112,12 +111,45 @@ body {
   color: #fff; background: var(--grad); border: none;
   box-shadow: 0 4px 14px rgba(255, 40, 10, 0.4);
 }
-.hero-intro {
-  color: var(--muted); font-size: 0.92rem; line-height: 1.55;
-  margin: 16px 0 0; max-width: 52ch;
+/* ----- Toolbar (progressive disclosure) -------------------------------- */
+.toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
+.tool {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 14px; font: inherit; font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; transition: background 0.16s, border-color 0.16s;
 }
+.tool:hover { background: var(--surface-2); }
+.tool.active { border-color: var(--accent-2); background: var(--grad-soft); }
+.tool-ico { font-size: 0.95rem; opacity: 0.9; }
+.tool-meta {
+  margin-left: auto; font-size: 0.72rem; font-weight: 600; color: var(--faint);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48%;
+}
+.tool-meta.ok { color: var(--good); }
 
-/* ----- Form / settings ------------------------------------------------- */
+/* ----- Panels (options / team) ----------------------------------------- */
+.panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 16px;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+.panel-lead { color: var(--muted); font-size: 0.85rem; margin: 0 0 16px; }
+
+.slots-group + .slots-group { margin-top: 18px; }
+.slots-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--muted); font-weight: 700; margin-bottom: 10px;
+}
+.slots-head span {
+  color: var(--muted); background: var(--surface-2);
+  padding: 2px 8px; border-radius: var(--radius-pill); letter-spacing: 0;
+}
+.slot + .slot { margin-top: 8px; }
+
+/* ----- Form controls --------------------------------------------------- */
 .field { display: flex; flex-direction: column; gap: 7px; }
 .field + .field, .field-row, .toggle, .btn-ghost { margin-top: 16px; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -357,6 +389,9 @@ select:focus, .num:focus {
 .legend .tag { margin-right: 2px; }
 
 /* ----- Chips ----------------------------------------------------------- */
+.chips-verdict { font-size: 0.92rem; color: var(--muted); margin: -6px 0 16px; }
+.chips-verdict.good { color: #6ee7b0; }
+.chips-verdict strong { color: var(--text); }
 .chip-grid { display: grid; gap: 12px; }
 @media (min-width: 560px) { .chip-grid { grid-template-columns: 1fr 1fr; } }
 .chip-card {

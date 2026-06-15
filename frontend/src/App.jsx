@@ -1,32 +1,33 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
-const MAX_DRIVERS = 5
-const MAX_CONSTRUCTORS = 2
+const N_DRIVERS = 5
+const N_CONS = 2
 const fmtPrice = (v) => `$${v.toFixed(1)}M`
 
 const PREDICTORS = [
   { id: 'naive', label: 'Simple — season average',
-    desc: 'Expects each driver to score their season average. Simplest, and the hardest to beat.' },
+    desc: 'Expects each driver to score their season average. Simplest, and hardest to beat.' },
   { id: 'heuristic', label: 'Form & track',
-    desc: 'Adjusts the average for recent form, history at this circuit, and reliability.' },
+    desc: 'Adjusts the average for recent form, circuit history, and reliability.' },
   { id: 'ml', label: 'Pace-aware (ML)',
-    desc: 'A trained model that adds qualifying & race-pace — the most accurate at overall ranking.' },
+    desc: 'Trained model using qualifying & race-pace — best at overall ranking.' },
 ]
+const PRED_SHORT = { naive: 'Simple', heuristic: 'Form & track', ml: 'Pace-aware' }
 
 const CHIP_INFO = {
-  wildcard: { label: 'Wildcard', desc: 'Unlimited free transfers for one race (no point penalties).' },
-  limitless: { label: 'Limitless', desc: 'No budget cap for one race — field any drivers you like.' },
-  extra_drs: { label: 'Extra DRS', desc: 'Triples one driver’s points (3×) instead of the usual 2×.' },
-  no_negative: { label: 'No Negative', desc: 'Any driver who scores below zero counts as zero instead.' },
+  wildcard: { label: 'Wildcard', desc: 'Unlimited free transfers for one race.' },
+  limitless: { label: 'Limitless', desc: 'No budget cap for one race.' },
+  extra_drs: { label: 'Extra DRS', desc: 'Triples one driver’s points (3×).' },
+  no_negative: { label: 'No Negative', desc: 'Negative driver scores count as zero.' },
   final_fix: { label: 'Final Fix', desc: 'Swap one pick after qualifying.' },
-  auto_pilot: { label: 'Auto Pilot', desc: 'App auto-picks your boost (mobile).' },
+  auto_pilot: { label: 'Auto Pilot', desc: 'Auto-picks your boost (mobile).' },
 }
 
 const fmtDate = (iso) => {
   if (!iso) return null
-  const d = new Date(iso + 'T00:00:00')
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(iso + 'T00:00:00').toLocaleDateString(undefined,
+    { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function Info({ text }) {
@@ -39,7 +40,7 @@ function Trend({ move }) {
   const up = move > 0
   return (
     <span className={`trend ${up ? 'up' : 'down'}`}
-      title={`Price projected to ${up ? 'rise' : 'fall'} about $${Math.abs(move)}M before the next race`}>
+      title={`Price projected to ${up ? 'rise' : 'fall'} ~$${Math.abs(move)}M before the next race`}>
       {up ? '↑' : '↓'}
     </span>
   )
@@ -70,52 +71,81 @@ function useApi(url) {
   return [data, error]
 }
 
-function TeamBuilder({ pool, team, toggle }) {
-  const drivers = pool.filter((p) => p.entity_type === 'driver')
-  const constructors = pool.filter((p) => p.entity_type === 'constructor')
-  const nDrivers = [...team].filter((id) => drivers.some((d) => d.fantasy_id === id)).length
-  const nCons = [...team].filter((id) => constructors.some((c) => c.fantasy_id === id)).length
-
-  const column = (items, label, count, max) => (
-    <div className="builder-col">
-      <div className="col-head">
-        <span>{label}</span>
-        <span className={`col-count ${count === max ? 'done' : ''}`}>{count}/{max}</span>
-      </div>
-      <div className="chip-pool">
-        {items.map((p) => {
-          const on = team.has(p.fantasy_id)
-          const full = (label === 'Drivers' ? nDrivers : nCons) >= max
-          return (
-            <button
-              key={p.fantasy_id}
-              className={`pill ${on ? 'on' : ''}`}
-              disabled={!on && full}
-              onClick={() => toggle(p.fantasy_id)}
-            >
-              {p.name} <span className="pill-price">{fmtPrice(p.price)}</span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-
+/* ----- Inputs (progressive disclosure) --------------------------------- */
+function OptionsPanel({ predictor, setPredictor, drsBoost, setDrsBoost,
+  freeTransfers, setFreeTransfers, budget, setBudget, gameday, refresh, refreshing }) {
+  const desc = PREDICTORS.find((p) => p.id === predictor)?.desc
   return (
-    <>
-      <p className="hint">
-        Tap the drivers and constructors <strong>currently in your team</strong>. Pick all
-        {' '}{MAX_DRIVERS} drivers and {MAX_CONSTRUCTORS} constructors to get transfer advice —
-        or leave it empty to see the ideal team from scratch.
-      </p>
-      <div className="builder">
-        {column(drivers, 'Drivers', nDrivers, MAX_DRIVERS)}
-        {column(constructors, 'Constructors', nCons, MAX_CONSTRUCTORS)}
+    <div className="panel fade-up">
+      <div className="field">
+        <label htmlFor="pred">Prediction method <Info text="How each pick's points are estimated." /></label>
+        <div className="select-wrap">
+          <select id="pred" value={predictor} onChange={(e) => setPredictor(e.target.value)}>
+            {PREDICTORS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </select>
+        </div>
+        {desc && <p className="field-hint">{desc}</p>}
       </div>
-    </>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="ft">Free transfers <Info text="Free changes this race; extras cost 10 pts each." /></label>
+          <input id="ft" className="num" type="number" min="0" value={freeTransfers}
+            onChange={(e) => setFreeTransfers(Math.max(0, +e.target.value))} />
+        </div>
+        <div className="field">
+          <label htmlFor="bud">Budget ($M) <Info text="Team value + bank. Defaults to the 100M cap." /></label>
+          <input id="bud" className="num" type="number" min="0" step="0.1" value={budget}
+            placeholder={gameday ? String(gameday.budget) : '100'}
+            onChange={(e) => setBudget(e.target.value)} />
+        </div>
+      </div>
+      <Toggle checked={drsBoost} onChange={setDrsBoost} label="Use DRS Boost"
+        tip="Free power-up that doubles one driver's points each race." />
+      {!gameday?.read_only && (
+        <button className="btn-ghost" onClick={refresh} disabled={refreshing}>
+          {refreshing ? 'Refreshing…' : '↻ Refresh data'}
+        </button>
+      )}
+    </div>
   )
 }
 
+function TeamSlots({ pool, driverSlots, consSlots, setDriver, setCons, clear }) {
+  const drivers = pool.filter((p) => p.entity_type === 'driver')
+  const cons = pool.filter((p) => p.entity_type === 'constructor')
+  const used = new Set([...driverSlots, ...consSlots].filter(Boolean))
+
+  const renderSlot = (items, value, onChange, placeholder, key) => {
+    const opts = items.filter((p) => p.fantasy_id === value || !used.has(p.fantasy_id))
+    return (
+      <div className="select-wrap slot" key={key}>
+        <select value={value} onChange={(e) => onChange(e.target.value)}>
+          <option value="">{placeholder}</option>
+          {opts.map((p) => (
+            <option key={p.fantasy_id} value={p.fantasy_id}>{p.name} · {fmtPrice(p.price)}</option>
+          ))}
+        </select>
+      </div>
+    )
+  }
+
+  return (
+    <div className="panel fade-up">
+      <p className="panel-lead">Pick the team you have now — we’ll suggest the best transfers.</p>
+      <div className="slots-group">
+        <div className="slots-head">Drivers <span>{driverSlots.filter(Boolean).length}/{N_DRIVERS}</span></div>
+        {driverSlots.map((v, i) => renderSlot(drivers, v, (val) => setDriver(i, val), `Driver ${i + 1}`, 'd' + i))}
+      </div>
+      <div className="slots-group">
+        <div className="slots-head">Constructors <span>{consSlots.filter(Boolean).length}/{N_CONS}</span></div>
+        {consSlots.map((v, i) => renderSlot(cons, v, (val) => setCons(i, val), `Constructor ${i + 1}`, 'c' + i))}
+      </div>
+      {used.size > 0 && <button className="btn-text" onClick={clear}>Clear all</button>}
+    </div>
+  )
+}
+
+/* ----- Result ---------------------------------------------------------- */
 function PickRow({ pick, rank, boosted, mult, badge, move }) {
   return (
     <div className={`pick ${boosted ? 'boosted' : ''}`}>
@@ -123,13 +153,13 @@ function PickRow({ pick, rank, boosted, mult, badge, move }) {
       <div className="pick-main">
         <div className="pick-name">
           {pick.name}
-          {boosted && <span className="tag tag-drs" title={`Points multiplied by ${mult}`}>DRS {mult}×</span>}
+          {boosted && <span className="tag tag-drs" title={`Points ×${mult}`}>DRS {mult}×</span>}
           {badge && <span className={`tag tag-${badge}`}>{badge === 'in' ? 'BUY' : 'SELL'}</span>}
         </div>
         <div className="pick-sub">
           <span className="pick-price">{fmtPrice(pick.price)}<Trend move={move} /></span>
           {pick.std > 0 && (
-            <span className="pick-range" title="Likely range — worst case to best case">
+            <span className="pick-range" title="Likely range — worst to best case">
               {pick.floor}–{pick.ceiling} pts
             </span>
           )}
@@ -161,27 +191,23 @@ function Lineup({ data, teamActive, projections }) {
 
   return (
     <section className="results fade-up">
-      <h2 className="section-title">
-        {teamActive ? 'Suggested changes' : 'Your optimal team'}
-      </h2>
+      <div className="results-head">
+        <h2 className="section-title">{teamActive ? 'Suggested changes' : 'Your optimal team'}</h2>
+      </div>
 
       <div className="stats">
         <Stat value={data.net_points.toFixed(0)} accent label="projected pts"
-          tip="Total fantasy points expected next race (after any transfer penalty)." />
+          tip="Points expected next race, after any transfer penalty." />
         <Stat value={fmtPrice(data.total_price)} label={`of ${fmtPrice(data.budget)}`} />
         {teamActive && (
-          <Stat value={data.num_transfers}
-            sub={data.penalty > 0 ? ` −${data.penalty}` : null}
-            label="transfers"
-            tip="Each change beyond your free transfers costs 10 points. This is the best trade-off." />
+          <Stat value={data.num_transfers} sub={data.penalty > 0 ? ` −${data.penalty}` : null}
+            label="transfers" tip="Changes beyond your free ones cost 10 pts each." />
         )}
       </div>
 
       <div className="budget">
-        <div className="budget-track" title="How much of your budget this team uses">
-          <div className={`budget-fill ${over ? 'over' : ''}`} style={{ width: `${pct}%` }} />
-        </div>
-        <span className="budget-text">{Math.round(pct)}% of budget</span>
+        <div className="budget-track"><div className={`budget-fill ${over ? 'over' : ''}`} style={{ width: `${pct}%` }} /></div>
+        <span className="budget-text">{Math.round(pct)}% of budget used</span>
       </div>
 
       {teamActive && data.num_transfers > 0 && (
@@ -191,7 +217,7 @@ function Lineup({ data, teamActive, projections }) {
         </div>
       )}
       {teamActive && data.num_transfers === 0 && (
-        <div className="callout good">✓ Your current team is already optimal — no changes needed.</div>
+        <div className="callout good">✓ Your team is already optimal — no changes needed.</div>
       )}
 
       <div className="group-label">Drivers</div>
@@ -211,49 +237,33 @@ function Lineup({ data, teamActive, projections }) {
             move={projections?.[p.fantasy_id]} />
         ))}
       </div>
-
-      <p className="legend">
-        <span className="tag tag-drs">DRS {data.drs_multiplier}×</span> boosted driver ·
-        Price <Trend move={0.1} /> rising <Trend move={-0.1} /> falling — buy risers early to build value ·
-        the small <em>x–y pts</em> is the likely worst→best range.
-      </p>
     </section>
   )
 }
 
 function Chips({ data }) {
   if (!data) return null
+  const best = data.valued[0]?.delta > 0 ? data.valued[0] : null
   return (
     <section className="chips fade-up">
       <h2 className="section-title">Worth playing a chip?</h2>
-      <p className="hint">
-        Chips are one-time power-ups. The number is the <strong>extra points</strong> it would add
-        this race — only worth using when it's clearly high.
-      </p>
+      {best
+        ? <p className="chips-verdict good">Yes — <strong>{CHIP_INFO[best.chip]?.label}</strong> adds about +{best.delta.toFixed(1)} pts this race.</p>
+        : <p className="chips-verdict">Not this race — save your chips for a bigger swing.</p>}
       <div className="chip-grid">
         {data.valued.map((c, i) => {
           const info = CHIP_INFO[c.chip] || { label: c.chip, desc: '' }
-          const best = i === 0 && c.delta > 0
+          const isBest = i === 0 && c.delta > 0
           return (
-            <div key={c.chip} className={`chip-card ${best ? 'best' : ''}`}>
+            <div key={c.chip} className={`chip-card ${isBest ? 'best' : ''}`}>
               <div className="chip-head">
                 <span className="chip-name">{info.label}</span>
-                {best && <span className="best-tag">Best value</span>}
+                {isBest && <span className="best-tag">Best</span>}
               </div>
               <p className="chip-desc">{info.desc}</p>
               <div className={`chip-delta ${c.delta > 0 ? 'gain' : 'flat'}`}>
-                {c.delta > 0 ? `+${c.delta.toFixed(1)} pts` : 'No gain now'}
+                {c.delta > 0 ? `+${c.delta.toFixed(1)} pts` : 'No gain'}
               </div>
-            </div>
-          )
-        })}
-        {data.info_only.map((id) => {
-          const info = CHIP_INFO[id] || { label: id, desc: '' }
-          return (
-            <div key={id} className="chip-card muted">
-              <div className="chip-head"><span className="chip-name">{info.label}</span></div>
-              <p className="chip-desc">{info.desc}</p>
-              <div className="chip-delta flat">In-race only</div>
             </div>
           )
         })}
@@ -268,27 +278,21 @@ function HowItWorks() {
       <summary>How it works &amp; what the terms mean</summary>
       <div className="how-body">
         <p>
-          This tool predicts how many fantasy points each driver and constructor will score in the
-          next Grand Prix, then builds the highest-scoring team you can afford within the budget cap
-          (5 drivers + 2 constructors). Live prices come from the official F1 Fantasy game; past
-          results and pace come from F1 timing data.
+          We predict each driver and constructor’s fantasy points for the next Grand Prix, then build
+          the highest-scoring team you can afford (5 drivers + 2 constructors). Prices come from the
+          official F1 Fantasy game; results and pace from F1 timing data.
         </p>
         <dl>
           <dt>Projected points</dt>
-          <dd>Our estimate of a pick’s fantasy score next race. Pick a method above — from a simple
-            season average to a pace-aware trained model.</dd>
+          <dd>Estimated fantasy score next race. Choose a method in Options.</dd>
           <dt>DRS Boost</dt>
-          <dd>A free power-up that doubles one driver’s points each race. The tool boosts whoever
-            gains the most.</dd>
+          <dd>Free power-up doubling one driver’s points; we boost whoever gains the most.</dd>
           <dt>Transfers &amp; the −10 penalty</dt>
-          <dd>You get free transfers each race; extras cost 10 points. Enter your team and the tool
-            only suggests changes that gain more than they cost.</dd>
+          <dd>Free transfers each race; extras cost 10 pts. We only suggest changes that gain more than they cost.</dd>
           <dt>Likely range (x–y)</dt>
-          <dd>F1 is unpredictable. This is the rough worst→best points for a driver based on how
-            consistent they’ve been.</dd>
+          <dd>Rough worst→best points for a driver, based on how consistent they’ve been.</dd>
           <dt>Price trend (↑ ↓ →)</dt>
-          <dd>A heuristic guess at whether a price will rise or fall. Buying a riser early grows your
-            team value over the season.</dd>
+          <dd>A guess at whether a price will rise or fall. Buy risers early to grow your team value.</dd>
         </dl>
       </div>
     </details>
@@ -300,7 +304,9 @@ export default function App() {
   const [drsBoost, setDrsBoost] = useState(true)
   const [freeTransfers, setFreeTransfers] = useState(2)
   const [budget, setBudget] = useState('')
-  const [team, setTeam] = useState(() => new Set())
+  const [driverSlots, setDriverSlots] = useState(() => Array(N_DRIVERS).fill(''))
+  const [consSlots, setConsSlots] = useState(() => Array(N_CONS).fill(''))
+  const [panel, setPanel] = useState(null) // 'options' | 'team' | null
   const [refreshing, setRefreshing] = useState(false)
   const [tick, setTick] = useState(0)
 
@@ -310,36 +316,31 @@ export default function App() {
   const pool = poolData?.picks ?? []
   const projections = projData?.projections
 
-  const teamComplete = useMemo(() => {
-    const d = [...team].filter((id) => pool.find((p) => p.fantasy_id === id && p.entity_type === 'driver')).length
-    const c = [...team].filter((id) => pool.find((p) => p.fantasy_id === id && p.entity_type === 'constructor')).length
-    return d === MAX_DRIVERS && c === MAX_CONSTRUCTORS
-  }, [team, pool])
+  const teamArr = useMemo(
+    () => [...driverSlots, ...consSlots].filter(Boolean),
+    [driverSlots, consSlots])
+  const teamComplete = driverSlots.every(Boolean) && consSlots.every(Boolean)
 
   const budgetParam = budget !== '' && +budget > 0 ? `&budget=${+budget}` : ''
-  const teamParam = teamComplete ? `&current_team=${[...team].join(',')}&free_transfers=${freeTransfers}` : ''
+  const teamParam = teamComplete ? `&current_team=${teamArr.join(',')}&free_transfers=${freeTransfers}` : ''
   const [rec] = useApi(`/api/recommend?predictor=${predictor}&drs_boost=${drsBoost}${teamParam}${budgetParam}&_=${tick}`)
   const [chips] = useApi(teamComplete
-    ? `/api/chips?predictor=${predictor}&current_team=${[...team].join(',')}&free_transfers=${freeTransfers}${budgetParam}&_=${tick}`
+    ? `/api/chips?predictor=${predictor}&current_team=${teamArr.join(',')}&free_transfers=${freeTransfers}${budgetParam}&_=${tick}`
     : null)
 
-  const toggle = (id) => setTeam((prev) => {
-    const next = new Set(prev)
-    next.has(id) ? next.delete(id) : next.add(id)
-    return next
-  })
+  const setDriver = (i, val) => setDriverSlots((s) => s.map((x, j) => (j === i ? val : x)))
+  const setCons = (i, val) => setConsSlots((s) => s.map((x, j) => (j === i ? val : x)))
+  const clearTeam = () => { setDriverSlots(Array(N_DRIVERS).fill('')); setConsSlots(Array(N_CONS).fill('')) }
 
   const refresh = async () => {
     setRefreshing(true)
     try {
       await fetch('/api/refresh', { method: 'POST' })
       setTick((t) => t + 1)
-    } finally {
-      setRefreshing(false)
-    }
+    } finally { setRefreshing(false) }
   }
 
-  const predictorDesc = PREDICTORS.find((p) => p.id === predictor)?.desc
+  const togglePanel = (p) => setPanel((cur) => (cur === p ? null : p))
 
   return (
     <div className="app">
@@ -358,59 +359,28 @@ export default function App() {
             </div>
           </div>
         )}
-        <p className="hero-intro">
-          The highest-scoring F1 Fantasy team for the next Grand Prix, within your budget.
-          Leave your team empty for the ideal squad, or enter it for transfer advice.
-        </p>
       </header>
 
-      <section className="card settings fade-up">
-        <div className="field">
-          <label htmlFor="pred">Prediction method <Info text="How we estimate each pick's points. Simpler is often just as accurate." /></label>
-          <div className="select-wrap">
-            <select id="pred" value={predictor} onChange={(e) => setPredictor(e.target.value)}>
-              {PREDICTORS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
-          </div>
-          {predictorDesc && <p className="field-hint">{predictorDesc}</p>}
-        </div>
-
-        <div className="field-row">
-          <div className="field">
-            <label htmlFor="ft">Free transfers <Info text="Changes you can make for free this race. Extra ones cost 10 points each." /></label>
-            <input id="ft" className="num" type="number" min="0" value={freeTransfers}
-              onChange={(e) => setFreeTransfers(Math.max(0, +e.target.value))} />
-          </div>
-          <div className="field">
-            <label htmlFor="bud">Budget ($M) <Info text="Money available (team value + bank). Defaults to the 100M cap." /></label>
-            <input id="bud" className="num" type="number" min="0" step="0.1" value={budget}
-              placeholder={gameday ? String(gameday.budget) : '100'}
-              onChange={(e) => setBudget(e.target.value)} />
-          </div>
-        </div>
-
-        <Toggle checked={drsBoost} onChange={setDrsBoost} label="Use DRS Boost"
-          tip="A free power-up that doubles one driver's points each race." />
-
-        {!gameday?.read_only && (
-          <button className="btn-ghost" onClick={refresh} disabled={refreshing}>
-            {refreshing ? 'Refreshing…' : '↻ Refresh data'}
-          </button>
-        )}
-      </section>
-
-      <details className="card team-panel fade-up" open={!teamComplete}>
-        <summary>
-          <span className="panel-title">My current team</span>
-          <span className={`panel-status ${teamComplete ? 'done' : ''}`}>
-            {teamComplete ? '✓ complete' : `${team.size}/7 · optional`}
+      <div className="toolbar fade-up">
+        <button className={`tool ${panel === 'options' ? 'active' : ''}`} onClick={() => togglePanel('options')}>
+          <span className="tool-ico">⚙</span> Options
+          <span className="tool-meta">{PRED_SHORT[predictor]}{drsBoost ? ' · DRS' : ''}</span>
+        </button>
+        <button className={`tool ${panel === 'team' ? 'active' : ''}`} onClick={() => togglePanel('team')}>
+          <span className="tool-ico">＋</span> My team
+          <span className={`tool-meta ${teamComplete ? 'ok' : ''}`}>
+            {teamComplete ? '✓ set' : `${teamArr.length}/7`}
           </span>
-        </summary>
-        <div className="panel-body">
-          {pool.length > 0 && <TeamBuilder pool={pool} team={team} toggle={toggle} />}
-          {team.size > 0 && <button className="btn-text" onClick={() => setTeam(new Set())}>Clear &amp; start over</button>}
-        </div>
-      </details>
+        </button>
+      </div>
+
+      {panel === 'options' && (
+        <OptionsPanel {...{ predictor, setPredictor, drsBoost, setDrsBoost,
+          freeTransfers, setFreeTransfers, budget, setBudget, gameday, refresh, refreshing }} />
+      )}
+      {panel === 'team' && pool.length > 0 && (
+        <TeamSlots {...{ pool, driverSlots, consSlots, setDriver, setCons, clear: clearTeam }} />
+      )}
 
       {rec ? (
         <Lineup data={rec} teamActive={teamComplete} projections={projections} />
@@ -420,9 +390,7 @@ export default function App() {
       {teamComplete && <Chips data={chips} />}
       <HowItWorks />
 
-      <footer className="foot">
-        Predictions are estimates, not guarantees. Data from F1 Fantasy &amp; F1 timing.
-      </footer>
+      <footer className="foot">Predictions are estimates, not guarantees. Data from F1 Fantasy &amp; F1 timing.</footer>
     </div>
   )
 }
