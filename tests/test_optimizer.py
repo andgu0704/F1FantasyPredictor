@@ -43,6 +43,19 @@ def test_extra_drs_triples_boost():
     assert three.gross_points == pytest.approx(two.gross_points + two.boosted.expected_points)
 
 
+def test_extra_drs_chip_boosts_two_distinct_drivers():
+    base = optimize_lineup(_pool(), budget=100.0)
+    extra = optimize_lineup(_pool(), budget=100.0, extra_drs=True)
+    # One driver at 3x, a second different driver at 2x.
+    assert extra.drs_multiplier == 3
+    assert extra.boosted2 is not None
+    assert extra.boosted.fantasy_id != extra.boosted2.fantasy_id
+    # Gain over base = two extra copies (3x) + one extra copy (2x) across the two.
+    gain = (extra.boosted.expected_points * 2 + extra.boosted2.expected_points
+            - base.boosted.expected_points)
+    assert extra.gross_points == pytest.approx(base.gross_points + gain)
+
+
 def test_transfer_penalty_applied_beyond_free_allowance():
     pool = _pool()
     # A current team made of the cheapest/worst picks forces transfers.

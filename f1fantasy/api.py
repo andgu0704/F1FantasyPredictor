@@ -102,6 +102,7 @@ def _lineup_json(lineup: Lineup, season: int, gd: int, budget: float, predictor:
         "num_transfers": lineup.num_transfers,
         "drs_multiplier": lineup.drs_multiplier,
         "boosted_id": lineup.boosted.fantasy_id if lineup.boosted else None,
+        "boosted2_id": lineup.boosted2.fantasy_id if lineup.boosted2 else None,
         "transfers_in": [_pick_json(p) for p in lineup.transfers_in],
         "transfers_out": [_pick_json(p) for p in lineup.transfers_out],
         "drivers": [_pick_json(p) for p in lineup.drivers],
@@ -167,7 +168,7 @@ _CHIP_KWARGS = {
     "none": {},
     "wildcard": {"unlimited_transfers": True},
     "limitless": {"unlimited_transfers": True, "unlimited_budget": True},
-    "extra_drs": {"drs_multiplier": 3},
+    "extra_drs": {"extra_drs": True},
 }
 
 

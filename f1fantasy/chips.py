@@ -48,7 +48,7 @@ def evaluate_chips(
     variants = {
         "wildcard": dict(unlimited_transfers=True),
         "limitless": dict(unlimited_transfers=True, unlimited_budget=True),
-        "extra_drs": dict(drs_multiplier=3),
+        "extra_drs": dict(extra_drs=True),
     }
     chips: list[ChipValue] = []
     for name, kwargs in variants.items():

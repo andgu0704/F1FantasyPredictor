@@ -19,7 +19,8 @@ suggests a swap that is not worth it.
 Chips are expressed as flags on the same model:
     Wildcard   -> unlimited_transfers (no penalty)
     Limitless  -> unlimited_budget + unlimited_transfers (one race, all free)
-    Extra DRS  -> drs_mult = 3 instead of 2
+    Extra DRS  -> a second 2x boost on a different driver, on top of the usual
+                  boost which becomes 3x (so one driver 3x + one driver 2x)
 """
 
 from __future__ import annotations
@@ -41,10 +42,11 @@ PENALTY_PER_TRANSFER = 10.0     # points lost per transfer beyond the free allow
 class Lineup:
     drivers: list[Pick]
     constructors: list[Pick]
-    boosted: Pick | None          # driver receiving the DRS boost
+    boosted: Pick | None          # driver receiving the (primary) DRS boost
     total_price: float
     gross_points: float           # expected points incl. boost, before transfer penalty
-    drs_multiplier: int = 2
+    drs_multiplier: int = 2       # multiplier on the primary boosted driver
+    boosted2: Pick | None = None  # second driver boosted 2x (Extra DRS chip only)
     transfers_in: list[Pick] = field(default_factory=list)   # newly bought
     transfers_out: list[Pick] = field(default_factory=list)  # sold (info only)
     num_transfers: int = 0
@@ -86,7 +88,11 @@ def optimize_lineup(
     free_transfers: int = 2,
     unlimited_transfers: bool = False,
     unlimited_budget: bool = False,
+    extra_drs: bool = False,
 ) -> Lineup:
+    # Extra DRS chip: the primary boost becomes 3x and a second driver gets 2x.
+    primary_mult = 3 if extra_drs else drs_multiplier
+    second_boost = extra_drs and drs_boost
     drivers = [p for p in picks if p.entity_type == "driver"]
     constructors = [p for p in picks if p.entity_type == "constructor"]
     if len(drivers) < n_drivers or len(constructors) < n_constructors:
@@ -97,13 +103,18 @@ def optimize_lineup(
             for p in picks}
     boost = {d.fantasy_id: pulp.LpVariable(f"boost_{d.fantasy_id}", cat="Binary")
              for d in drivers} if drs_boost else {}
+    boost2 = {d.fantasy_id: pulp.LpVariable(f"boost2_{d.fantasy_id}", cat="Binary")
+              for d in drivers} if second_boost else {}
 
     objective = pulp.lpSum(p.expected_points * pick[p.fantasy_id] for p in picks)
     if drs_boost:
-        # A boosted driver's points are multiplied by drs_multiplier: add the
-        # (drs_multiplier - 1) extra copies on top of the base pick.
-        objective += (drs_multiplier - 1) * pulp.lpSum(
+        # A boosted driver's points are multiplied by primary_mult: add the
+        # (primary_mult - 1) extra copies on top of the base pick.
+        objective += (primary_mult - 1) * pulp.lpSum(
             d.expected_points * boost[d.fantasy_id] for d in drivers)
+    if second_boost:
+        # Second driver gets a 2x boost (one extra copy of their points).
+        objective += pulp.lpSum(d.expected_points * boost2[d.fantasy_id] for d in drivers)
 
     # Transfer penalty (only when a current team is known and not waived).
     owned = current_team or set()
@@ -123,6 +134,12 @@ def optimize_lineup(
         prob += pulp.lpSum(boost.values()) == 1
         for d in drivers:
             prob += boost[d.fantasy_id] <= pick[d.fantasy_id]
+    if second_boost:
+        prob += pulp.lpSum(boost2.values()) == 1
+        for d in drivers:
+            prob += boost2[d.fantasy_id] <= pick[d.fantasy_id]
+            # The two boosts must land on different drivers.
+            prob += boost[d.fantasy_id] + boost2[d.fantasy_id] <= 1
 
     status = prob.solve(pulp.PULP_CBC_CMD(msg=False))
     if pulp.LpStatus[status] != "Optimal":
@@ -132,11 +149,14 @@ def optimize_lineup(
     chosen_c = [c for c in constructors if pick[c.fantasy_id].value() > 0.5]
     chosen_ids = {p.fantasy_id for p in chosen_d + chosen_c}
     boosted = next((d for d in drivers if drs_boost and boost[d.fantasy_id].value() > 0.5), None)
+    boosted2 = next((d for d in drivers if second_boost and boost2[d.fantasy_id].value() > 0.5), None)
 
     total_price = sum(p.price for p in chosen_d + chosen_c)
     gross = sum(p.expected_points for p in chosen_d + chosen_c)
     if boosted:
-        gross += (drs_multiplier - 1) * boosted.expected_points
+        gross += (primary_mult - 1) * boosted.expected_points
+    if boosted2:
+        gross += boosted2.expected_points  # 2x => one extra copy
 
     transfers_in = [p for p in chosen_d + chosen_c if p.fantasy_id not in owned] if owned else []
     transfers_out = [p for p in picks if p.fantasy_id in owned and p.fantasy_id not in chosen_ids]
@@ -146,8 +166,8 @@ def optimize_lineup(
         penalty = PENALTY_PER_TRANSFER * max(0, num_transfers - free_transfers)
 
     return Lineup(
-        drivers=chosen_d, constructors=chosen_c, boosted=boosted,
-        total_price=total_price, gross_points=gross, drs_multiplier=drs_multiplier,
+        drivers=chosen_d, constructors=chosen_c, boosted=boosted, boosted2=boosted2,
+        total_price=total_price, gross_points=gross, drs_multiplier=primary_mult,
         transfers_in=transfers_in, transfers_out=transfers_out,
         num_transfers=num_transfers, penalty=penalty,
     )

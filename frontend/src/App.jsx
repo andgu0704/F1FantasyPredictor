@@ -18,7 +18,7 @@ const PRED_SHORT = { naive: 'Simple', heuristic: 'Form & track', ml: 'Pace-aware
 const CHIP_INFO = {
   wildcard: { label: 'Wildcard', desc: 'Unlimited free transfers for one race.' },
   limitless: { label: 'Limitless', desc: 'No budget cap for one race.' },
-  extra_drs: { label: 'Extra DRS', desc: 'Triples one driver’s points (3×).' },
+  extra_drs: { label: 'Extra DRS', desc: 'One driver 3× and a second driver 2×.' },
   no_negative: { label: 'No Negative', desc: 'Negative driver scores count as zero.' },
   final_fix: { label: 'Final Fix', desc: 'Swap one pick after qualifying.' },
   auto_pilot: { label: 'Auto Pilot', desc: 'Auto-picks your boost (mobile).' },
@@ -153,14 +153,14 @@ function TeamSlots({ pool, driverSlots, consSlots, setDriver, setCons, clear }) 
 }
 
 /* ----- Result ---------------------------------------------------------- */
-function PickRow({ pick, rank, boosted, mult, badge, move }) {
+function PickRow({ pick, rank, boost, badge, move }) {
   return (
-    <div className={`pick ${boosted ? 'boosted' : ''}`}>
+    <div className={`pick ${boost ? 'boosted' : ''}`}>
       <div className="pick-rank">{rank}</div>
       <div className="pick-main">
         <div className="pick-name">
           {pick.name}
-          {boosted && <span className="tag tag-drs" title={`Points ×${mult}`}>DRS {mult}×</span>}
+          {boost && <span className="tag tag-drs" title={`Points ×${boost}`}>DRS {boost}×</span>}
           {badge && <span className={`tag tag-${badge}`}>{badge === 'in' ? 'BUY' : 'SELL'}</span>}
         </div>
         <div className="pick-sub">
@@ -230,8 +230,10 @@ function Lineup({ data, teamActive, projections }) {
       <div className="group-label">Drivers</div>
       <div className="picklist">
         {drivers.map((p, i) => (
-          <PickRow key={p.fantasy_id} pick={p} rank={i + 1} boosted={p.fantasy_id === data.boosted_id}
-            mult={data.drs_multiplier} badge={teamActive && inIds.has(p.fantasy_id) ? 'in' : null}
+          <PickRow key={p.fantasy_id} pick={p} rank={i + 1}
+            boost={p.fantasy_id === data.boosted_id ? data.drs_multiplier
+              : p.fantasy_id === data.boosted2_id ? 2 : null}
+            badge={teamActive && inIds.has(p.fantasy_id) ? 'in' : null}
             move={projections?.[p.fantasy_id]} />
         ))}
       </div>
@@ -239,8 +241,8 @@ function Lineup({ data, teamActive, projections }) {
       <div className="group-label">Constructors</div>
       <div className="picklist">
         {cons.map((p, i) => (
-          <PickRow key={p.fantasy_id} pick={p} rank={i + 1} boosted={false}
-            mult={data.drs_multiplier} badge={teamActive && inIds.has(p.fantasy_id) ? 'in' : null}
+          <PickRow key={p.fantasy_id} pick={p} rank={i + 1} boost={null}
+            badge={teamActive && inIds.has(p.fantasy_id) ? 'in' : null}
             move={projections?.[p.fantasy_id]} />
         ))}
       </div>
@@ -257,13 +259,16 @@ function ChipPicker({ data, chip, setChip, rec }) {
   const selected = valued.find((c) => c.chip === chip)
   const selDelta = selected?.delta ?? 0
   const boosted = rec?.drivers?.find((d) => d.fantasy_id === rec.boosted_id)
+  const boosted2 = rec?.drivers?.find((d) => d.fantasy_id === rec.boosted2_id)
 
   const appliedNote = () => {
     if (chip === 'none') return null
     const info = CHIP_INFO[chip] || { label: chip }
     let msg
     if (chip === 'extra_drs')
-      msg = boosted ? <>Tripling <b>{boosted.name}</b>’s points — the best driver to boost.</> : 'Tripling your top driver’s points.'
+      msg = boosted
+        ? <>Tripling <b>{boosted.name}</b> (3×){boosted2 && <> and doubling <b>{boosted2.name}</b> (2×)</>} — the best pair to boost.</>
+        : 'Boosting your top drivers.'
     else if (chip === 'limitless')
       msg = <>Budget cap removed — the <b>whole team was re-optimized</b> (now {fmtPrice(rec.total_price)}).</>
     else if (chip === 'wildcard')
