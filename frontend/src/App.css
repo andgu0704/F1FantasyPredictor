@@ -29,28 +29,48 @@
 }
 
 :root[data-theme="light"] {
-  --bg: #f5f6fa;
-  --bg-grad-1: #ffe6e0;
-  --bg-grad-2: #eaeefb;
-  --surface: rgba(255, 255, 255, 0.7);
-  --surface-2: rgba(15, 18, 30, 0.045);
-  --surface-hover: rgba(15, 18, 30, 0.07);
-  --border: rgba(15, 18, 30, 0.1);
-  --border-strong: rgba(15, 18, 30, 0.2);
-  --text: #14161c;
-  --muted: #565d70;
-  --faint: #8990a1;
+  --bg: #e9edf3;
+  --bg-grad-1: #ffeae5;
+  --bg-grad-2: #e3e9f4;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --surface-hover: #e4e8f0;
+  --border: #dde1ea;
+  --border-strong: #c3c9d6;
+  --text: #0d0f15;
+  --muted: #4a5263;
+  --faint: #767d8d;
   --accent: #e10600;
-  --accent-2: #d40500;
-  --good: #0f9d58;
-  --good-dim: rgba(15, 157, 88, 0.12);
-  --warn: #c97a00;
-  --shadow: 0 10px 30px rgba(20, 22, 40, 0.12);
-  --grad-soft: linear-gradient(135deg, rgba(255, 24, 1, 0.1), rgba(255, 106, 61, 0.03));
-  --title-grad: linear-gradient(180deg, #14161c 30%, #41475a);
-  --good-text: #0a7a45;
-  --warn-text: #9a6500;
+  --accent-2: #c40500;
+  --good: #0a8f4f;
+  --good-dim: rgba(10, 143, 79, 0.1);
+  --warn: #b86e00;
+  --shadow: 0 4px 16px rgba(20, 22, 40, 0.1);
+  --grad-soft: linear-gradient(135deg, rgba(225, 6, 0, 0.07), rgba(255, 106, 61, 0.03));
+  --title-grad: linear-gradient(180deg, #0d0f15 20%, #353b4a);
+  --good-text: #07703d;
+  --warn-text: #8a5a00;
 }
+
+/* Light mode: solid cards need real elevation for separation. */
+:root[data-theme="light"] .card,
+:root[data-theme="light"] .panel,
+:root[data-theme="light"] .pick,
+:root[data-theme="light"] .stat,
+:root[data-theme="light"] .chip-card,
+:root[data-theme="light"] .tool,
+:root[data-theme="light"] .how,
+:root[data-theme="light"] .theme-toggle {
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 2px 6px rgba(16, 24, 40, 0.05);
+}
+:root[data-theme="light"] .tool.active {
+  box-shadow: 0 1px 2px rgba(225, 6, 0, 0.12), 0 2px 8px rgba(225, 6, 0, 0.1);
+}
+:root[data-theme="light"] .pick.boosted {
+  background: linear-gradient(135deg, rgba(225, 6, 0, 0.05), #fff);
+}
+:root[data-theme="light"] select,
+:root[data-theme="light"] .num { background: #fff; }
 
 * { box-sizing: border-box; }
 
@@ -62,7 +82,7 @@ body {
   font-family: 'Inter', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
   background:
     radial-gradient(1100px 600px at 50% -10%, var(--bg-grad-1), transparent 60%),
-    radial-gradient(900px 500px at 90% 10%, #0c1020, transparent 55%),
+    radial-gradient(900px 500px at 90% 10%, var(--bg-grad-2), transparent 55%),
     var(--bg);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
