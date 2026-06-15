@@ -86,6 +86,26 @@ class Lineup:
         return "\n".join(lines)
 
 
+def fixed_team_points(
+    picks: list[Pick],
+    team_ids: set[str],
+    drs_boost: bool = True,
+    extra_drs: bool = False,
+) -> float:
+    """Net points of an exact, fixed team (no transfers) with the boost applied
+    to the best driver(s) — used to value a user's current team as-is."""
+    chosen = [p for p in picks if p.fantasy_id in team_ids]
+    gross = sum(p.expected_points for p in chosen)
+    drivers = sorted((p for p in chosen if p.entity_type == "driver"),
+                     key=lambda p: p.expected_points, reverse=True)
+    if drs_boost and drivers:
+        primary_mult = 3 if extra_drs else 2
+        gross += (primary_mult - 1) * drivers[0].expected_points
+        if extra_drs and len(drivers) > 1:
+            gross += drivers[1].expected_points  # second driver 2x
+    return gross
+
+
 def optimize_lineup(
     picks: list[Pick],
     budget: float = DEFAULT_BUDGET,

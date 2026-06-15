@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from f1fantasy.optimizer import PENALTY_PER_TRANSFER, optimize_lineup
+from f1fantasy.optimizer import PENALTY_PER_TRANSFER, fixed_team_points, optimize_lineup
 from f1fantasy.predictor.base import Pick
 
 
@@ -85,3 +85,18 @@ def test_unlimited_budget_can_exceed_cap():
 def test_raises_when_pool_too_small():
     with pytest.raises(ValueError):
         optimize_lineup([Pick("driver", "d0", "D0", 5, 10)], budget=100.0)
+
+
+def test_fixed_team_points_matches_optimizer_for_optimal_team():
+    optimal = optimize_lineup(_pool(), budget=100.0)
+    team = {p.fantasy_id for p in optimal.drivers + optimal.constructors}
+    # Valuing the optimal team as a fixed team reproduces its gross points.
+    assert fixed_team_points(_pool(), team) == pytest.approx(optimal.gross_points)
+
+
+def test_fixed_team_points_extra_drs_boosts_two_drivers():
+    optimal = optimize_lineup(_pool(), budget=100.0)
+    team = {p.fantasy_id for p in optimal.drivers + optimal.constructors}
+    base = fixed_team_points(_pool(), team)
+    extra = fixed_team_points(_pool(), team, extra_drs=True)
+    assert extra > base  # second 2x boost adds points

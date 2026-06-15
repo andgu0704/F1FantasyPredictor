@@ -27,7 +27,8 @@ from fastapi.staticfiles import StaticFiles
 
 from f1fantasy.chips import evaluate_chips
 from f1fantasy.db import connect
-from f1fantasy.optimizer import Lineup, optimize_lineup
+from f1fantasy.optimizer import Lineup, fixed_team_points, optimize_lineup
+from f1fantasy.sprint import sprint_adjusted
 from f1fantasy.predictor.base import PredictorBase, Pick
 from f1fantasy.predictor.heuristic import HeuristicPredictor
 from f1fantasy.predictor.ml import MLPredictor
@@ -161,7 +162,7 @@ def picks(predictor: str = "naive") -> dict:
     pred = _get_predictor(predictor)
     with _db() as conn:
         season, gd, _ = current_gameday(conn)
-        items = pred.predict(conn, season, gd)
+        items = sprint_adjusted(conn, season, pred.predict(conn, season, gd))
     items.sort(key=lambda p: (p.entity_type, -p.expected_points))
     return {"predictor": pred.name, "picks": [_pick_json(p) for p in items]}
 
@@ -195,17 +196,25 @@ def recommend(
     if risk not in _RISK:
         raise HTTPException(404, f"Unknown risk '{risk}'. Options: {list(_RISK)}")
     pred = _get_predictor(predictor)
+    team = _parse_team(current_team)
     with _db() as conn:
         season, gd, live_budget = current_gameday(conn)
-        items = pred.predict(conn, season, gd)
+        items = sprint_adjusted(conn, season, pred.predict(conn, season, gd))
         lineup = optimize_lineup(
             items, budget=budget or live_budget, drs_boost=drs_boost,
-            current_team=_parse_team(current_team), free_transfers=free_transfers,
+            current_team=team, free_transfers=free_transfers,
             risk_aversion=_RISK[risk], **_CHIP_KWARGS[chip],
         )
+        # Value the user's current team as-is, to show what the changes gain.
+        n_d = sum(1 for p in items if p.entity_type == "driver" and p.fantasy_id in (team or set()))
+        n_c = sum(1 for p in items if p.entity_type == "constructor" and p.fantasy_id in (team or set()))
+        current_points = (fixed_team_points(items, team, drs_boost=drs_boost,
+                                            extra_drs=(chip == "extra_drs"))
+                          if team and n_d == 5 and n_c == 2 else None)
     out = _lineup_json(lineup, season, gd, budget or live_budget, pred.name)
     out["chip"] = chip
     out["risk"] = risk
+    out["current_net_points"] = round(current_points, 1) if current_points is not None else None
     return out
 
 
@@ -219,7 +228,7 @@ def chips(
     pred = _get_predictor(predictor)
     with _db() as conn:
         season, gd, live_budget = current_gameday(conn)
-        items = pred.predict(conn, season, gd)
+        items = sprint_adjusted(conn, season, pred.predict(conn, season, gd))
         base, chip_values = evaluate_chips(
             items, budget or live_budget, current_team=_parse_team(current_team),
             free_transfers=free_transfers,

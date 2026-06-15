@@ -237,6 +237,15 @@ function Lineup({ data, teamActive, projections }) {
         <span className="budget-text">{Math.round(pct)}% of budget used</span>
       </div>
 
+      {teamActive && data.current_net_points != null && data.num_transfers > 0 && (
+        <div className="gain-bar">
+          <div className="gain-col"><span className="gain-num">{Math.round(data.current_net_points)}</span><span className="gain-lbl">your team</span></div>
+          <span className="gain-arrow">→</span>
+          <div className="gain-col"><span className="gain-num">{Math.round(data.net_points)}</span><span className="gain-lbl">suggested</span></div>
+          <span className="gain-amt">{data.net_points - data.current_net_points >= 0.5
+            ? `+${(data.net_points - data.current_net_points).toFixed(1)} pts` : 'about the same'}</span>
+        </div>
+      )}
       {teamActive && data.num_transfers > 0 && (
         <div className="transfers">
           <span className="transfer t-out">SELL&nbsp; {data.transfers_out.map((p) => p.name).join(', ') || '—'}</span>
@@ -244,7 +253,7 @@ function Lineup({ data, teamActive, projections }) {
         </div>
       )}
       {teamActive && data.num_transfers === 0 && (
-        <div className="callout good">✓ Your team is already optimal — no changes needed.</div>
+        <div className="callout good">✓ Your team is already optimal — no changes gain enough to be worth it.</div>
       )}
 
       <div className="group-label">Drivers</div>
@@ -473,6 +482,9 @@ export default function App() {
       )}
 
       {rec && <ModeBanner teamComplete={teamComplete} onOpenTeam={() => setPanel('team')} />}
+      {rec && gameday?.is_sprint && (
+        <div className="sprint-note">🏁 <b>Sprint weekend</b> — extra sprint points are factored into these projections.</div>
+      )}
 
       {rec ? (
         <Lineup data={rec} teamActive={teamComplete} projections={projections} />
