@@ -352,10 +352,12 @@ export default function App() {
             placeholder={gameday ? gameday.budget : '100'}
             onChange={(e) => setBudget(e.target.value)} />
         </label>
-        <button className="refresh" onClick={refresh} disabled={refreshing}
-          title="Pull the latest prices and results for the upcoming race">
-          {refreshing ? 'Refreshing…' : '↻ Refresh data'}
-        </button>
+        {!gameday?.read_only && (
+          <button className="refresh" onClick={refresh} disabled={refreshing}
+            title="Pull the latest prices and results for the upcoming race">
+            {refreshing ? 'Refreshing…' : '↻ Refresh data'}
+          </button>
+        )}
       </div>
       {predictorDesc && <p className="method-desc">{predictorDesc}</p>}
 

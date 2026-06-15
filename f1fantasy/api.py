@@ -14,8 +14,12 @@ Endpoints:
 
 from __future__ import annotations
 
+import os
 from contextlib import contextmanager
 from pathlib import Path
+
+# True on read-only serverless hosts (e.g. Vercel) where ingestion can't write.
+READ_ONLY = bool(os.environ.get("VERCEL"))
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -128,7 +132,8 @@ def gameday() -> dict:
             "upcoming_round": upcoming["round"] if upcoming else None,
             "upcoming_race": upcoming["race_name"] if upcoming else None,
             "upcoming_date": upcoming["date"] if upcoming else None,
-            "is_sprint": bool(upcoming["is_sprint"]) if upcoming else False}
+            "is_sprint": bool(upcoming["is_sprint"]) if upcoming else False,
+            "read_only": READ_ONLY}
 
 
 @app.get("/api/predictors")
@@ -220,6 +225,10 @@ def chips(
 @app.post("/api/refresh")
 def refresh() -> dict:
     """Re-ingest the latest Jolpica + fantasy data so the app tracks each race."""
+    if READ_ONLY:
+        raise HTTPException(
+            503, "Data refresh is disabled on the hosted version (read-only "
+                 "filesystem). Update locally and redeploy to refresh.")
     from f1fantasy.ingestion.ingest import main as ingest_main
 
     rc = ingest_main([])  # default seasons
