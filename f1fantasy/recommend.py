@@ -25,12 +25,19 @@ def current_gameday(conn: sqlite3.Connection) -> tuple[int, int, float]:
         raise RuntimeError("No game_state captured yet — run the ingestion first.")
     season, gd, budget = row["season"], row["gameday"], row["max_team_value"] or DEFAULT_BUDGET
 
-    # If results exist for this gameday, advance to the next one for picking.
+    # If results exist for this gameday AND fantasy_stats for the next gameday are available,
+    # advance to allow picking for the next race.
     latest_race = conn.execute(
         "SELECT MAX(round) r FROM results WHERE season=?", (season,)
     ).fetchone()["r"]
     if latest_race and latest_race >= gd:
-        gd = latest_race + 1
+        next_gd = latest_race + 1
+        has_stats = conn.execute(
+            "SELECT 1 FROM fantasy_stats WHERE season=? AND gameday=? LIMIT 1",
+            (season, next_gd),
+        ).fetchone()
+        if has_stats:
+            gd = next_gd
 
     return season, gd, budget
 
