@@ -56,6 +56,26 @@ function Toggle({ checked, onChange, label, tip }) {
   )
 }
 
+function ModeBanner({ teamComplete, onOpenTeam }) {
+  if (teamComplete) {
+    return (
+      <div className="mode-banner transfer">
+        <span><b>Transfer mode.</b> Advice is tailored to your team — the
+          {' '}<span className="tag tag-in">BUY</span> / <span className="tag tag-out">SELL</span>
+          {' '}tags show exactly what to change this race.</span>
+        <button className="link" onClick={onOpenTeam}>Edit team</button>
+      </div>
+    )
+  }
+  return (
+    <div className="mode-banner build">
+      <span><b>Showing the ideal team to build from scratch.</b> Already playing?
+        Add your current team to get personalised <b>buy / sell</b> transfer advice instead.</span>
+      <button className="link" onClick={onOpenTeam}>＋ Add my team</button>
+    </div>
+  )
+}
+
 function useApi(url) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
@@ -309,6 +329,16 @@ export default function App() {
   const [panel, setPanel] = useState(null) // 'options' | 'team' | null
   const [refreshing, setRefreshing] = useState(false)
   const [tick, setTick] = useState(0)
+  const [theme, setTheme] = useState(() => {
+    const saved = typeof localStorage !== 'undefined' && localStorage.getItem('theme')
+    if (saved) return saved
+    return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    try { localStorage.setItem('theme', theme) } catch { /* ignore */ }
+  }, [theme])
 
   const [gameday] = useApi(`/api/gameday?_=${tick}`)
   const [poolData] = useApi(`/api/picks?predictor=${predictor}&_=${tick}`)
@@ -345,9 +375,16 @@ export default function App() {
   return (
     <div className="app">
       <header className="hero fade-up">
-        <div className="brand">
-          <span className="logo" aria-hidden="true">🏎️</span>
-          <span className="brand-name">F1 Fantasy <b>Optimizer</b></span>
+        <div className="brand-row">
+          <div className="brand">
+            <span className="logo" aria-hidden="true">🏎️</span>
+            <span className="brand-name">F1 Fantasy <b>Optimizer</b></span>
+          </div>
+          <button className="theme-toggle" onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
         </div>
         {gameday && (
           <div className="hero-race">
@@ -381,6 +418,8 @@ export default function App() {
       {panel === 'team' && pool.length > 0 && (
         <TeamSlots {...{ pool, driverSlots, consSlots, setDriver, setCons, clear: clearTeam }} />
       )}
+
+      {rec && <ModeBanner teamComplete={teamComplete} onOpenTeam={() => setPanel('team')} />}
 
       {rec ? (
         <Lineup data={rec} teamActive={teamComplete} projections={projections} />
