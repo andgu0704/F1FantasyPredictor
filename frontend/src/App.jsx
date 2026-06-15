@@ -92,8 +92,7 @@ function useApi(url) {
 }
 
 /* ----- Inputs (progressive disclosure) --------------------------------- */
-function OptionsPanel({ predictor, setPredictor, drsBoost, setDrsBoost,
-  freeTransfers, setFreeTransfers, budget, setBudget, gameday, refresh, refreshing }) {
+function OptionsPanel({ predictor, setPredictor, drsBoost, setDrsBoost, gameday, refresh, refreshing }) {
   const desc = PREDICTORS.find((p) => p.id === predictor)?.desc
   return (
     <div className="panel fade-up">
@@ -106,21 +105,9 @@ function OptionsPanel({ predictor, setPredictor, drsBoost, setDrsBoost,
         </div>
         {desc && <p className="field-hint">{desc}</p>}
       </div>
-      <div className="field-row">
-        <div className="field">
-          <label htmlFor="ft">Free transfers <Info text="Free changes this race; extras cost 10 pts each." /></label>
-          <input id="ft" className="num" type="number" min="0" value={freeTransfers}
-            onChange={(e) => setFreeTransfers(Math.max(0, +e.target.value))} />
-        </div>
-        <div className="field">
-          <label htmlFor="bud">Budget ($M) <Info text="Team value + bank. Defaults to the 100M cap." /></label>
-          <input id="bud" className="num" type="number" min="0" step="0.1" value={budget}
-            placeholder={gameday ? String(gameday.budget) : '100'}
-            onChange={(e) => setBudget(e.target.value)} />
-        </div>
-      </div>
       <Toggle checked={drsBoost} onChange={setDrsBoost} label="Use DRS Boost"
         tip="Free power-up that doubles one driver's points each race." />
+      <p className="field-hint">Budget is fixed at $100M and free transfers at 2 — the standard F1 Fantasy rules.</p>
       {!gameday?.read_only && (
         <button className="btn-ghost" onClick={refresh} disabled={refreshing}>
           {refreshing ? 'Refreshing…' : '↻ Refresh data'}
@@ -261,33 +248,73 @@ function Lineup({ data, teamActive, projections }) {
   )
 }
 
-function Chips({ data }) {
+const MEANINGFUL = 0.05 // pts threshold to count a chip as "worth it"
+
+function ChipPicker({ data, chip, setChip, rec }) {
   if (!data) return null
-  const best = data.valued[0]?.delta > 0 ? data.valued[0] : null
+  const valued = data.valued || []
+  const best = valued.find((c) => c.delta > MEANINGFUL)
+  const selected = valued.find((c) => c.chip === chip)
+  const selDelta = selected?.delta ?? 0
+  const boosted = rec?.drivers?.find((d) => d.fantasy_id === rec.boosted_id)
+
+  const appliedNote = () => {
+    if (chip === 'none') return null
+    const info = CHIP_INFO[chip] || { label: chip }
+    let msg
+    if (chip === 'extra_drs')
+      msg = boosted ? <>Tripling <b>{boosted.name}</b>’s points — the best driver to boost.</> : 'Tripling your top driver’s points.'
+    else if (chip === 'limitless')
+      msg = <>Budget cap removed — the <b>whole team was re-optimized</b> (now {fmtPrice(rec.total_price)}).</>
+    else if (chip === 'wildcard')
+      msg = 'Unlimited free transfers — the team was re-optimized with no penalty.'
+    else if (chip === 'no_negative')
+      msg = 'Negative driver scores now count as zero. Your lineup stays the same.'
+    return (
+      <div className="chip-applied">
+        <span>✓ <b>{info.label}</b> applied. {msg}</span>
+        <span className="chip-applied-gain">{selDelta > MEANINGFUL ? `+${selDelta.toFixed(1)} pts` : '≈ no change'}</span>
+      </div>
+    )
+  }
+
+  const option = (id, label, desc, delta) => {
+    const sel = chip === id
+    const worth = delta != null && delta > MEANINGFUL
+    return (
+      <button key={id} type="button" className={`chip-card ${sel ? 'selected' : ''} ${delta != null && !worth ? 'dim' : ''}`}
+        onClick={() => setChip(id)} aria-pressed={sel}>
+        <div className="chip-head">
+          <span className="chip-name">{label}</span>
+          <span className={`chip-radio ${sel ? 'on' : ''}`} aria-hidden="true" />
+        </div>
+        <p className="chip-desc">{desc}</p>
+        <div className={`chip-delta ${worth ? 'gain' : 'flat'}`}>
+          {delta == null ? 'Normal race' : worth ? `+${delta.toFixed(1)} pts` : 'No gain'}
+        </div>
+      </button>
+    )
+  }
+
   return (
     <section className="chips fade-up">
-      <h2 className="section-title">Worth playing a chip?</h2>
-      {best
-        ? <p className="chips-verdict good">Yes — <strong>{CHIP_INFO[best.chip]?.label}</strong> adds about +{best.delta.toFixed(1)} pts this race.</p>
-        : <p className="chips-verdict">Not this race — save your chips for a bigger swing.</p>}
+      <h2 className="section-title">Power-ups (chips)</h2>
+      <p className={`chips-verdict ${best ? 'good' : ''}`}>
+        {best
+          ? <>Best play this race: <b>{CHIP_INFO[best.chip]?.label}</b> (about +{best.delta.toFixed(1)} pts).</>
+          : <>No chip gains much this race — save them for a bigger weekend.</>}
+        {' '}Tap one to apply it; the team updates above.
+      </p>
       <div className="chip-grid">
-        {data.valued.map((c, i) => {
-          const info = CHIP_INFO[c.chip] || { label: c.chip, desc: '' }
-          const isBest = i === 0 && c.delta > 0
-          return (
-            <div key={c.chip} className={`chip-card ${isBest ? 'best' : ''}`}>
-              <div className="chip-head">
-                <span className="chip-name">{info.label}</span>
-                {isBest && <span className="best-tag">Best</span>}
-              </div>
-              <p className="chip-desc">{info.desc}</p>
-              <div className={`chip-delta ${c.delta > 0 ? 'gain' : 'flat'}`}>
-                {c.delta > 0 ? `+${c.delta.toFixed(1)} pts` : 'No gain'}
-              </div>
-            </div>
-          )
-        })}
+        {option('none', 'No chip', 'Play the race normally.', null)}
+        {valued.map((c) => option(c.chip, CHIP_INFO[c.chip]?.label || c.chip, CHIP_INFO[c.chip]?.desc || '', c.delta))}
       </div>
+      {appliedNote()}
+      {data.info_only?.length > 0 && (
+        <p className="chips-foot">
+          In-race only (can’t pre-apply): {data.info_only.map((id) => CHIP_INFO[id]?.label || id).join(', ')}.
+        </p>
+      )}
     </section>
   )
 }
@@ -322,8 +349,7 @@ function HowItWorks() {
 export default function App() {
   const [predictor, setPredictor] = useState('naive')
   const [drsBoost, setDrsBoost] = useState(true)
-  const [freeTransfers, setFreeTransfers] = useState(2)
-  const [budget, setBudget] = useState('')
+  const [chip, setChip] = useState('none')
   const [driverSlots, setDriverSlots] = useState(() => Array(N_DRIVERS).fill(''))
   const [consSlots, setConsSlots] = useState(() => Array(N_CONS).fill(''))
   const [panel, setPanel] = useState(null) // 'options' | 'team' | null
@@ -351,12 +377,14 @@ export default function App() {
     [driverSlots, consSlots])
   const teamComplete = driverSlots.every(Boolean) && consSlots.every(Boolean)
 
-  const budgetParam = budget !== '' && +budget > 0 ? `&budget=${+budget}` : ''
-  const teamParam = teamComplete ? `&current_team=${teamArr.join(',')}&free_transfers=${freeTransfers}` : ''
-  const [rec] = useApi(`/api/recommend?predictor=${predictor}&drs_boost=${drsBoost}${teamParam}${budgetParam}&_=${tick}`)
-  const [chips] = useApi(teamComplete
-    ? `/api/chips?predictor=${predictor}&current_team=${teamArr.join(',')}&free_transfers=${freeTransfers}${budgetParam}&_=${tick}`
-    : null)
+  // Budget and free transfers are fixed at the standard F1 Fantasy rules.
+  const teamParam = teamComplete ? `&current_team=${teamArr.join(',')}&free_transfers=2` : ''
+  // No Negative doesn't change the lineup, so apply 'none' to the optimizer for it.
+  const recChip = chip === 'no_negative' ? 'none' : chip
+  // Extra DRS needs a boosted driver to triple.
+  const drsParam = recChip === 'extra_drs' ? true : drsBoost
+  const [rec] = useApi(`/api/recommend?predictor=${predictor}&drs_boost=${drsParam}&chip=${recChip}${teamParam}&_=${tick}`)
+  const [chips] = useApi(`/api/chips?predictor=${predictor}${teamParam}&_=${tick}`)
 
   const setDriver = (i, val) => setDriverSlots((s) => s.map((x, j) => (j === i ? val : x)))
   const setCons = (i, val) => setConsSlots((s) => s.map((x, j) => (j === i ? val : x)))
@@ -412,8 +440,7 @@ export default function App() {
       </div>
 
       {panel === 'options' && (
-        <OptionsPanel {...{ predictor, setPredictor, drsBoost, setDrsBoost,
-          freeTransfers, setFreeTransfers, budget, setBudget, gameday, refresh, refreshing }} />
+        <OptionsPanel {...{ predictor, setPredictor, drsBoost, setDrsBoost, gameday, refresh, refreshing }} />
       )}
       {panel === 'team' && pool.length > 0 && (
         <TeamSlots {...{ pool, driverSlots, consSlots, setDriver, setCons, clear: clearTeam }} />
@@ -426,7 +453,7 @@ export default function App() {
       ) : (
         <div className="loading"><span className="spinner" />Building your optimal team…</div>
       )}
-      {teamComplete && <Chips data={chips} />}
+      {rec && <ChipPicker data={chips} chip={chip} setChip={setChip} rec={rec} />}
       <HowItWorks />
 
       <footer className="foot">Predictions are estimates, not guarantees. Data from F1 Fantasy &amp; F1 timing.</footer>
