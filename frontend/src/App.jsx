@@ -320,8 +320,9 @@ export default function App() {
         <h1>🏎️ F1 Fantasy Team Optimizer</h1>
         {gameday && (
           <p className="subtitle">
-            Next race: Gameday {gameday.gameday}, {gameday.season}
-            {gameday.deadline && <> · pick by {gameday.deadline.split(' ')[0]}</>}
+            Next race: {gameday.upcoming_race || `Gameday ${gameday.gameday}`}
+            {gameday.upcoming_round && <> · Round {gameday.upcoming_round}, {gameday.season}</>}
+            {gameday.upcoming_date && <> · {gameday.upcoming_date}</>}
             {gameday.is_sprint && <span className="sprint-badge" title="Sprint weekend — extra points on offer">🏁 SPRINT</span>}
           </p>
         )}
