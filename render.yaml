@@ -1,0 +1,14 @@
+# Render blueprint — deploys the full app from the Dockerfile.
+# This is the reliable fallback if Vercel's serverless constraints (PuLP's CBC
+# solver binary, read-only filesystem) cause trouble: it runs the exact same
+# container that works locally.
+#
+# Deploy: push to GitHub, then on render.com → "New" → "Blueprint" → pick this repo.
+services:
+  - type: web
+    name: f1-fantasy
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
