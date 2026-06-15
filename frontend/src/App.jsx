@@ -92,7 +92,7 @@ function useApi(url) {
 }
 
 /* ----- Inputs (progressive disclosure) --------------------------------- */
-function OptionsPanel({ predictor, setPredictor, drsBoost, setDrsBoost, gameday, refresh, refreshing }) {
+function OptionsPanel({ predictor, setPredictor, drsBoost, setDrsBoost, risk, setRisk, gameday, refresh, refreshing }) {
   const desc = PREDICTORS.find((p) => p.id === predictor)?.desc
   return (
     <div className="panel fade-up">
@@ -105,6 +105,18 @@ function OptionsPanel({ predictor, setPredictor, drsBoost, setDrsBoost, gameday,
         </div>
         {desc && <p className="field-hint">{desc}</p>}
       </div>
+
+      <div className="field">
+        <label>Strategy <Info text="Balanced chases the most points. Safe prefers consistent drivers for a more predictable score — handy when protecting a rank — at the cost of some upside." /></label>
+        <div className="segmented">
+          <button className={risk === 'balanced' ? 'on' : ''} onClick={() => setRisk('balanced')}>Balanced</button>
+          <button className={risk === 'safe' ? 'on' : ''} onClick={() => setRisk('safe')}>Safe</button>
+        </div>
+        <p className="field-hint">{risk === 'safe'
+          ? 'Steadier, more predictable score (tighter range) — trades away some upside.'
+          : 'Maximises projected points (the default).'}</p>
+      </div>
+
       <Toggle checked={drsBoost} onChange={setDrsBoost} label="Use DRS Boost"
         tip="Free power-up that doubles one driver's points each race." />
       <p className="field-hint">Budget is fixed at $100M and free transfers at 2 — the standard F1 Fantasy rules.</p>
@@ -211,6 +223,14 @@ function Lineup({ data, teamActive, projections }) {
             label="transfers" tip="Changes beyond your free ones cost 10 pts each." />
         )}
       </div>
+
+      {data.points_std > 0 && (
+        <div className="band" title="Most likely outcome range (about 2 in 3 races land here)">
+          <span className="band-ico">📊</span>
+          Likely between <b>{Math.round(data.floor)}</b> and <b>{Math.round(data.ceiling)}</b> pts
+          <span className="band-pm">±{Math.round(data.points_std)}</span>
+        </div>
+      )}
 
       <div className="budget">
         <div className="budget-track"><div className={`budget-fill ${over ? 'over' : ''}`} style={{ width: `${pct}%` }} /></div>
@@ -354,6 +374,7 @@ function HowItWorks() {
 export default function App() {
   const [predictor, setPredictor] = useState('naive')
   const [drsBoost, setDrsBoost] = useState(true)
+  const [risk, setRisk] = useState('balanced')
   const [chip, setChip] = useState('none')
   const [driverSlots, setDriverSlots] = useState(() => Array(N_DRIVERS).fill(''))
   const [consSlots, setConsSlots] = useState(() => Array(N_CONS).fill(''))
@@ -388,7 +409,7 @@ export default function App() {
   const recChip = chip === 'no_negative' ? 'none' : chip
   // Extra DRS needs a boosted driver to triple.
   const drsParam = recChip === 'extra_drs' ? true : drsBoost
-  const [rec] = useApi(`/api/recommend?predictor=${predictor}&drs_boost=${drsParam}&chip=${recChip}${teamParam}&_=${tick}`)
+  const [rec] = useApi(`/api/recommend?predictor=${predictor}&drs_boost=${drsParam}&chip=${recChip}&risk=${risk}${teamParam}&_=${tick}`)
   const [chips] = useApi(`/api/chips?predictor=${predictor}${teamParam}&_=${tick}`)
 
   const setDriver = (i, val) => setDriverSlots((s) => s.map((x, j) => (j === i ? val : x)))
@@ -434,7 +455,7 @@ export default function App() {
       <div className="toolbar fade-up">
         <button className={`tool ${panel === 'options' ? 'active' : ''}`} onClick={() => togglePanel('options')}>
           <span className="tool-ico">⚙</span> Options
-          <span className="tool-meta">{PRED_SHORT[predictor]}{drsBoost ? ' · DRS' : ''}</span>
+          <span className="tool-meta">{PRED_SHORT[predictor]}{risk === 'safe' ? ' · Safe' : ''}{drsBoost ? ' · DRS' : ''}</span>
         </button>
         <button className={`tool ${panel === 'team' ? 'active' : ''}`} onClick={() => togglePanel('team')}>
           <span className="tool-ico">＋</span> My team
@@ -445,7 +466,7 @@ export default function App() {
       </div>
 
       {panel === 'options' && (
-        <OptionsPanel {...{ predictor, setPredictor, drsBoost, setDrsBoost, gameday, refresh, refreshing }} />
+        <OptionsPanel {...{ predictor, setPredictor, drsBoost, setDrsBoost, risk, setRisk, gameday, refresh, refreshing }} />
       )}
       {panel === 'team' && pool.length > 0 && (
         <TeamSlots {...{ pool, driverSlots, consSlots, setDriver, setCons, clear: clearTeam }} />

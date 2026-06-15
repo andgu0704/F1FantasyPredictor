@@ -262,6 +262,31 @@ select:focus, .num:focus {
 }
 .num { font-variant-numeric: tabular-nums; }
 
+/* Segmented control (strategy) */
+.segmented {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  gap: 4px; padding: 4px; border-radius: var(--radius-sm);
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.segmented button {
+  font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer;
+  color: var(--muted); background: none; border: none; border-radius: 9px;
+  padding: 9px 10px; transition: background 0.16s, color 0.16s;
+}
+.segmented button.on { background: var(--grad); color: #fff; box-shadow: 0 2px 8px rgba(255, 40, 10, 0.3); }
+.segmented button:not(.on):hover { color: var(--text); }
+
+/* Confidence band */
+.band {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  margin: 14px 0 4px; padding: 11px 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--muted);
+}
+.band b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.band-ico { font-size: 0.95rem; }
+.band-pm { margin-left: auto; font-size: 0.76rem; color: var(--faint); font-variant-numeric: tabular-nums; }
+
 /* Toggle switch */
 .toggle {
   display: flex; align-items: center; justify-content: space-between;

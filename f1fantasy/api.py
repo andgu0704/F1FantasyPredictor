@@ -98,6 +98,9 @@ def _lineup_json(lineup: Lineup, season: int, gd: int, budget: float, predictor:
         "total_price": round(lineup.total_price, 1),
         "gross_points": round(lineup.gross_points, 1),
         "net_points": round(lineup.net_points, 1),
+        "points_std": round(lineup.points_std, 1),
+        "floor": round(lineup.floor, 1),
+        "ceiling": round(lineup.ceiling, 1),
         "penalty": round(lineup.penalty, 1),
         "num_transfers": lineup.num_transfers,
         "drs_multiplier": lineup.drs_multiplier,
@@ -171,6 +174,11 @@ _CHIP_KWARGS = {
     "extra_drs": {"extra_drs": True},
 }
 
+# Strategy -> risk_aversion. "safe" trades a little expected value for a much
+# tighter floor. (A variance-based "aggressive" isn't offered: the max-points
+# lineup is already near-maximum variance, so it would only shed points.)
+_RISK = {"balanced": 0.0, "safe": 1.0}
+
 
 @app.get("/api/recommend")
 def recommend(
@@ -180,9 +188,12 @@ def recommend(
     current_team: str | None = Query(None, description="Comma-separated fantasy_ids."),
     free_transfers: int = Query(2, ge=0),
     chip: str = Query("none"),
+    risk: str = Query("balanced"),
 ) -> dict:
     if chip not in _CHIP_KWARGS:
         raise HTTPException(404, f"Unknown chip '{chip}'. Options: {list(_CHIP_KWARGS)}")
+    if risk not in _RISK:
+        raise HTTPException(404, f"Unknown risk '{risk}'. Options: {list(_RISK)}")
     pred = _get_predictor(predictor)
     with _db() as conn:
         season, gd, live_budget = current_gameday(conn)
@@ -190,10 +201,11 @@ def recommend(
         lineup = optimize_lineup(
             items, budget=budget or live_budget, drs_boost=drs_boost,
             current_team=_parse_team(current_team), free_transfers=free_transfers,
-            **_CHIP_KWARGS[chip],
+            risk_aversion=_RISK[risk], **_CHIP_KWARGS[chip],
         )
     out = _lineup_json(lineup, season, gd, budget or live_budget, pred.name)
     out["chip"] = chip
+    out["risk"] = risk
     return out
 
 
