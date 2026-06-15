@@ -1,50 +1,15 @@
 # Deployment
 
-## Vercel (recommended for this app)
-
-The app runs on Vercel's serverless platform. The database is committed to git, so deployments are zero-config.
-
-### Steps
-
-1. **Install Vercel CLI** (optional, for local testing):
-   ```bash
-   npm install -g vercel
-   ```
-
-2. **Connect to Vercel**:
-   ```bash
-   vercel link
-   ```
-   or push to GitHub and connect the repo via vercel.com.
-
-3. **Deploy**:
-   ```bash
-   vercel deploy
-   ```
-   or just push to your repo's `main` branch (Vercel auto-deploys).
-
-### How it works
-
-- `vercel.json` tells Vercel to:
-  - Build the frontend (React/Vite) into `frontend/dist`
-  - Serve `api/index.py` (the FastAPI app) as a serverless function
-  - Proxy `/api/*` requests to that function
-  - Serve static files (the built UI) for all other routes
-- The database (`data/f1fantasy.db`) is committed, so it ships with every deployment.
-- Cold starts are fast (~0.5s) because Python + dependencies are cached.
-
-### Notes
-
-- **The `/api/refresh` endpoint** is disabled on Vercel (no persistent filesystem). Update data manually by:
-  1. Running locally: `uv run python -m f1fantasy.ingestion.ingest`
-  2. Committing the new `data/f1fantasy.db`
-  3. Pushing to trigger a redeploy
-- For a production app with live data, use a **remote database** (PostgreSQL on Railway, PlanetScale, etc.) and set the `DATABASE_URL` environment variable in Vercel.
+This app (FastAPI + the PuLP/CBC solver binary + a SQLite file + a React
+monorepo) runs best in a **container**, not on serverless. Render and Railway
+both build the `Dockerfile` directly, so they run the exact app that works
+locally. Vercel was tried and dropped — its serverless model fights the native
+solver binary and read-only filesystem.
 
 ## Render (recommended — runs the real container)
 
-The most reliable option: Render builds the `Dockerfile`, so it runs the exact
-app that works locally — no serverless constraints (PuLP's solver, read-only FS).
+Render builds the `Dockerfile`, so it runs the exact app that works locally —
+no serverless constraints (PuLP's solver, read-only FS).
 
 ### Steps
 

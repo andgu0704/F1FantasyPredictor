@@ -1,7 +1,0 @@
-# Runtime deps for the Vercel serverless function (serving only).
-# fastf1 is intentionally excluded — it's only used by /api/refresh (disabled on
-# Vercel, no persistent filesystem) and would bloat the bundle past the size limit.
-fastapi>=0.137.0
-numpy>=2.4.6
-pulp>=3.3.2
-httpx>=0.28.1
