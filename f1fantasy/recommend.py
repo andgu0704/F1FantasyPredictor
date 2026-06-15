@@ -23,7 +23,16 @@ def current_gameday(conn: sqlite3.Connection) -> tuple[int, int, float]:
     ).fetchone()
     if row is None:
         raise RuntimeError("No game_state captured yet — run the ingestion first.")
-    return row["season"], row["gameday"], row["max_team_value"] or DEFAULT_BUDGET
+    season, gd, budget = row["season"], row["gameday"], row["max_team_value"] or DEFAULT_BUDGET
+
+    # If results exist for this gameday, advance to the next one for picking.
+    latest_race = conn.execute(
+        "SELECT MAX(round) r FROM results WHERE season=?", (season,)
+    ).fetchone()["r"]
+    if latest_race and latest_race >= gd:
+        gd = latest_race + 1
+
+    return season, gd, budget
 
 
 def recommend(
